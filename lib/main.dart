@@ -3,6 +3,10 @@ import 'package:demo_app/screens/Home_Page/home_screen.dart';
 import 'package:demo_app/screens/Phishing_Consultant/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:demo_app/screens/Auth_Page/auth_check_screen.dart';
+import 'package:demo_app/screens/Auth_Page/login_screen.dart';
+import 'package:demo_app/screens/Auth_Page/register_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_one_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
 
@@ -37,9 +41,13 @@ class MyApp extends StatelessWidget {
       // Use the routes table for all navigation
       initialRoute: '/',
       routes: {
-        '/': (context) => const HomeScreen(),
+        '/': (context) => const AuthCheckScreen(),
         '/consultant': (context) => const ConsultantScreen(),
         '/mailAnalyzer': (context) => const HomePage(), // Your newly added route
+        '/login': (context) => const LoginScreen(),
+        '/register': (context) => const RegisterScreen(),
+        '/home': (context) => const HomeScreen(), // The main app screen
+        '/gameLevelOne': (context) => const GameLevelOneScreen(),
       },
     );
   }

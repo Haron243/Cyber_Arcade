@@ -4,6 +4,7 @@ import 'package:demo_app/widgets/Home_Page/cyber_background.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
 import 'package:demo_app/widgets/Home_Page/custom_glitch_text.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_frame.dart';
+import 'package:demo_app/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,8 +65,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 50),
                   CyberButton(
-                    text: 'CONTINUE',
-                    onPressed: () {},
+                    text: 'START GAME',
+                    onPressed: () {
+                      // Navigate to the game level
+                      Navigator.pushNamed(context, '/gameLevelOne');
+                    },
                   ),
                   const Spacer(),
                   Align(
@@ -126,10 +130,15 @@ class _CustomDrawer extends StatelessWidget {
               _drawerItem(context, 'NEW GAME', () {}),
               _drawerItem(context, 'SETTINGS', () {}),
               _drawerItem(context, 'PROGRESS', () {}),
+              _drawerItem(context, 'LOGOUT', () {
+                  AuthService().logoutUser();
+                  Navigator.pushReplacementNamed(context, '/login');
+                }),
             ],
           ),
         ),
       ),
+      
     );
   }
 
