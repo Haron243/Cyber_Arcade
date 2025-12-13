@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     text: 'START GAME',
                     onPressed: () {
                       // Navigate to the game level
-                      Navigator.pushNamed(context, '/gameLevelOne');
+                      Navigator.pushNamed(context, '/levelSelection');
                     },
                   ),
                   const Spacer(),

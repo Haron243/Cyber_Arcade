@@ -12,7 +12,7 @@ class CustomGlitchText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFF92444); // This color is already perfect for the text itself
+    const primaryColor = Color(0xFFF92444); //  color for the text 
 
     return Text(
       text,

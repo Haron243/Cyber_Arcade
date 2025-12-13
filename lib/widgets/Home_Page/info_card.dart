@@ -16,7 +16,7 @@ class InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // 1. Wrap the CustomPaint with a GestureDetector
     return GestureDetector(
-      // 2. Add the onTap property to call your onPressed function
+      // 2.  to call onPressed function
       onTap: onPressed,
       child: CustomPaint(
         painter: _CardBorderPainter(),

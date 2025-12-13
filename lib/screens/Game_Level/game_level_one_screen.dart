@@ -11,7 +11,7 @@ class WebsiteCard {
   WebsiteCard({required this.url, required this.isPhishing});
 }
 
-// **MODIFIED:** Converted to a StatefulWidget to manage the drawer's state
+//  Converted to a StatefulWidget to manage the drawer's state
 class GameLevelOneScreen extends StatefulWidget {
   const GameLevelOneScreen({super.key});
 
@@ -20,7 +20,7 @@ class GameLevelOneScreen extends StatefulWidget {
 }
 
 class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
-  // **NEW:** A key to control the Scaffold and open the drawer
+  // key to control the Scaffold and open the drawer
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Game data
@@ -55,7 +55,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // **MODIFIED:** Added key and drawer properties to the Scaffold
+    // Added key and drawer properties to the Scaffold
     return Scaffold(
       key: _scaffoldKey,
       drawer: const _CustomDrawer(),
@@ -76,7 +76,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
           if (_isCorrect == null) _buildGamePanel(),
           if (_isCorrect != null) _buildResultOverlay(),
 
-          // **NEW:** Hamburger menu icon in the top-left corner
+          // Hamburger menu icon in the top-left corner (3 horizontal lines)
           Positioned(
             top: 40,
             left: 15,
@@ -241,7 +241,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
   }
 }
 
-// **NEW:** Copied the drawer widget from home_screen.dart
+// Copied the drawer widget from home_screen.dart
 class _CustomDrawer extends StatelessWidget {
   const _CustomDrawer();
 
