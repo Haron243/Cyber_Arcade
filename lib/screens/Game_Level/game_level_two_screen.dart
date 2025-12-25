@@ -1,10 +1,9 @@
-// File: lib/screens/Game_Level/game_level_two_screen.dart
-
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_background.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
-import 'package:demo_app/services/level_two_data.dart'; // Import the data file
+import 'package:demo_app/data/level_two_data.dart';
+import 'package:demo_app/services/user_progress_service.dart'; // Add this
 
 class GameLevelTwoScreen extends StatefulWidget {
   const GameLevelTwoScreen({super.key});
@@ -36,7 +35,6 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
       if (_currentIndex < levelTwoData.length - 1) {
         _currentIndex++;
       } else {
-        // End of Level - Navigate back or show summary
         _showSummaryDialog();
       }
     });
@@ -67,7 +65,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
                   // --- Header: HUD ---
                   _buildHUD(),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10), // Reduced height for landscape
 
                   // --- Main Game Area ---
                   Expanded(
@@ -79,7 +77,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),
@@ -105,7 +103,6 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Level Indicator
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
@@ -123,7 +120,6 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
             ),
           ),
         ),
-        // Score
         Text(
           "SCORE: $_score",
           style: const TextStyle(
@@ -167,7 +163,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Mock Browser/App Header
+                // Header
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -187,7 +183,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
                         child: Text(
                           scenario.urlOrSender,
                           style: const TextStyle(
-                            fontFamily: 'Courier', // Monospaced for tech feel
+                            fontFamily: 'Courier',
                             color: Colors.white,
                             fontSize: 12,
                           ),
@@ -224,7 +220,6 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
                           ),
                         ),
                         const SizedBox(height: 30),
-                        // Fake Action Button inside the email/sms
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -252,7 +247,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
 
         // Decision Buttons
         Row(
@@ -269,7 +264,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
             Expanded(
               child: _buildDecisionButton(
                 "PHISHING",
-                const Color(0xFFF92444), // Cyber Red
+                const Color(0xFFF92444),
                 Icons.warning_amber_rounded,
                 () => _handleGuess(true),
               ),
@@ -284,7 +279,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 60,
+        height: 50, // Slightly reduced height
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.6),
           border: Border.all(color: color.withOpacity(0.7), width: 2),
@@ -294,14 +289,14 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 10),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontFamily: 'Orbitron',
                 color: color,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
               ),
@@ -312,6 +307,7 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
     );
   }
 
+  // **FIXED: Now Scrollable to prevent Overflow**
   Widget _buildFeedbackView(Scenario scenario) {
     bool isSuccess = _lastGuessCorrect!;
     Color statusColor = isSuccess ? Colors.greenAccent : const Color(0xFFF92444);
@@ -325,58 +321,65 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
         border: Border.all(color: statusColor, width: 2),
         boxShadow: [BoxShadow(color: statusColor.withOpacity(0.3), blurRadius: 30)],
       ),
-      padding: const EdgeInsets.all(25),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isSuccess ? Icons.shield_outlined : Icons.gpp_bad_outlined,
-            size: 80,
-            color: statusColor,
+      // Use ClipRRect to ensure scrolling content doesn't bleed out corners
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(25),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // Takes minimum space needed
+            children: [
+              Icon(
+                isSuccess ? Icons.shield_outlined : Icons.gpp_bad_outlined,
+                size: 60, // Smaller icon for landscape
+                color: statusColor,
+              ),
+              const SizedBox(height: 15),
+              Text(
+                isSuccess ? "THREAT NEUTRALIZED" : "SYSTEM COMPROMISED",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Orbitron',
+                  color: statusColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                scenario.isPhishing ? "It was PHISHING." : "It was LEGITIMATE.",
+                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              ),
+              const Divider(color: Colors.white24, height: 30),
+              const Text(
+                "ANALYSIS PROTOCOL:",
+                style: TextStyle(
+                  fontFamily: 'Orbitron',
+                  color: Colors.cyanAccent,
+                  fontSize: 12,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                scenario.educationalReasoning,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 30), // Replaces Spacer()
+              CyberButton(
+                text: "CONTINUE",
+                onPressed: _nextScenario,
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-          Text(
-            isSuccess ? "THREAT NEUTRALIZED" : "SYSTEM COMPROMISED",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Orbitron',
-              color: statusColor,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            scenario.isPhishing ? "It was PHISHING." : "It was LEGITIMATE.",
-            style: TextStyle(color: Colors.white.withOpacity(0.7)),
-          ),
-          const Divider(color: Colors.white24, height: 40),
-          const Text(
-            "ANALYSIS PROTOCOL:",
-            style: TextStyle(
-              fontFamily: 'Orbitron',
-              color: Colors.cyanAccent,
-              fontSize: 12,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            scenario.educationalReasoning,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.4,
-            ),
-          ),
-          const Spacer(),
-          CyberButton(
-            text: "CONTINUE",
-            onPressed: _nextScenario,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -419,9 +422,13 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
               const SizedBox(height: 30),
               CyberButton(
                 text: "RETURN TO BASE",
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to Home
+                onPressed: () async{
+                  final service = UserProgressService();
+                  await service.saveLevelProgress(2, _score);
+                  if (context.mounted) {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Go back to Selection Screen
+                  }
                 },
               ),
             ],
