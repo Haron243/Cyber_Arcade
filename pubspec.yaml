@@ -38,6 +38,7 @@ dependencies:
   dash_chat_2: ^0.0.20
   http: ^1.5.0
   shared_preferences: ^2.2.3
+  audioplayers: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +65,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/images/
+    - assets/audio/
 
   fonts:
     - family: Orbitron

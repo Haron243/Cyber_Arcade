@@ -3,11 +3,15 @@ import 'package:demo_app/screens/Home_Page/home_screen.dart';
 import 'package:demo_app/screens/Phishing_Consultant/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+// authentication
 import 'package:demo_app/screens/Auth_Page/auth_check_screen.dart';
 import 'package:demo_app/screens/Auth_Page/login_screen.dart';
 import 'package:demo_app/screens/Auth_Page/register_screen.dart';
+// levels
 import 'package:demo_app/screens/Game_Level/game_level_one_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_two_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_three_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_four_screen.dart';
 import 'package:demo_app/screens/Game_Level/level_selection_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
@@ -52,6 +56,8 @@ class MyApp extends StatelessWidget {
         '/levelSelection': (context) => const LevelSelectionScreen(),
         '/gameLevelOne': (context) => const GameLevelOneScreen(),
         '/gameLevelTwo': (context) => const GameLevelTwoScreen(),
+        '/gameLevelThree': (context) => const GameLevelThreeScreen(),
+        '/gameLevelFour': (context) => const GameLevelFourScreen(),
       },
     );
   }
