@@ -10,6 +10,7 @@ import 'package:demo_app/screens/Auth_Page/register_screen.dart';
 // levels
 import 'package:demo_app/screens/Game_Level/game_level_one_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_two_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_three_screen.dart';
 import 'package:demo_app/screens/Game_Level/level_selection_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
         '/levelSelection': (context) => const LevelSelectionScreen(),
         '/gameLevelOne': (context) => const GameLevelOneScreen(),
         '/gameLevelTwo': (context) => const GameLevelTwoScreen(),
+        '/gameLevelThree': (context) => const GameLevelThreeScreen(),
       },
     );
   }
