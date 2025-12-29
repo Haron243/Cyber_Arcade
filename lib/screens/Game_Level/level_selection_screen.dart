@@ -17,10 +17,13 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   // Lock Status
   bool _isLevel2Locked = true;
   bool _isLevel3Locked = true;
+  bool _isLevel4Locked = true;
   
   // XP Tracking
   int _level1XP = 0;
   int _level2XP = 0;
+  int _level3XP = 0;
+  int _level4XP = 0;
 
   @override
   void initState() {
@@ -34,17 +37,21 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     // Check locks
     bool lvl2Open = await service.isLevelUnlocked(2);
     bool lvl3Open = await service.isLevelUnlocked(3);
+    bool lvl4Open = await service.isLevelUnlocked(4);
     
     // Get Scores
     int xp1 = await service.getLevelXP(1);
     int xp2 = await service.getLevelXP(2);
+    int xp3 = await service.getLevelXP(3);
 
     if (mounted) {
       setState(() {
         _isLevel2Locked = !lvl2Open;
         _isLevel3Locked = !lvl3Open;
+        _isLevel4Locked = !lvl4Open;
         _level1XP = xp1;
         _level2XP = xp2;
+        _level3XP = xp3;
         _isLoading = false;
       });
     }
@@ -137,6 +144,19 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                       isLocked: _isLevel3Locked, 
                       xpRequired: 600, 
                     ),
+
+                    // LEVEL 4
+                  _buildLevelCard(
+                    context,
+                    title: "LEVEL 04",
+                    subtitle: "SHADOW WI-FI // NETWORK SECURITY",
+                    description: "Identify Evil Twin access points in public spaces.",
+                    color: Colors.blueAccent,
+                    icon: Icons.wifi_lock,
+                    route: '/gameLevelFour',
+                    isLocked: _isLevel4Locked,
+                    xpRequired: 800,
+                  ),
 
                     const SizedBox(height: 40), // Bottom padding
                   ],
