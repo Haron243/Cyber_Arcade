@@ -7,7 +7,8 @@ class UserProgressService {
   static final Map<int, int> _unlockRequirements = {
     2: 500, 
     3: 600, 
-    4: 100
+    4: 100,
+    5: 200,
   };
 
   // Helper to get threshold for UI

@@ -18,6 +18,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   bool _isLevel2Locked = true;
   bool _isLevel3Locked = true;
   bool _isLevel4Locked = true;
+  bool _isLevel5Locked = true;
   
   // XP Tracking
   int _level1XP = 0;
@@ -38,20 +39,24 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     bool lvl2Open = await service.isLevelUnlocked(2);
     bool lvl3Open = await service.isLevelUnlocked(3);
     bool lvl4Open = await service.isLevelUnlocked(4);
+    bool lvl5Open = await service.isLevelUnlocked(5);
     
     // Get Scores
     int xp1 = await service.getLevelXP(1);
     int xp2 = await service.getLevelXP(2);
     int xp3 = await service.getLevelXP(3);
+    int xp4 = await service.getLevelXP(4);
 
     if (mounted) {
       setState(() {
         _isLevel2Locked = !lvl2Open;
         _isLevel3Locked = !lvl3Open;
         _isLevel4Locked = !lvl4Open;
+        _isLevel5Locked = !lvl5Open;
         _level1XP = xp1;
         _level2XP = xp2;
         _level3XP = xp3;
+        _level4XP = xp4;
         _isLoading = false;
       });
     }
@@ -145,6 +150,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                       xpRequired: 600, 
                     ),
 
+                    const SizedBox(height: 20),
+
                     // LEVEL 4
                   _buildLevelCard(
                     context,
@@ -158,7 +165,23 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                     xpRequired: 800,
                   ),
 
-                    const SizedBox(height: 40), // Bottom padding
+                    const SizedBox(height: 20),
+
+                    // LEVEL 5
+                  _buildLevelCard(
+                    context,
+                    title: "LEVEL 05",
+                    subtitle: "QUISHING // QR FORENSICS",
+                    description: "Analyze embedded QR URLs for hidden redirects.",
+                    color: Colors.cyanAccent,
+                    icon: Icons.qr_code_scanner,
+                    route: '/gameLevelFive',
+                    isLocked: _isLevel5Locked,
+                    xpRequired: 200,
+                  ),
+
+                  const SizedBox(height: 40), // Bottom padding
+
                   ],
                 ),
           ),

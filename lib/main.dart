@@ -12,6 +12,7 @@ import 'package:demo_app/screens/Game_Level/game_level_one_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_two_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_three_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_four_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_five_screen.dart';
 import 'package:demo_app/screens/Game_Level/level_selection_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
@@ -48,8 +49,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const AuthCheckScreen(),
-        '/consultant': (context) => const ConsultantScreen(),
-        '/mailAnalyzer': (context) => const HomePage(), // Your newly added route
+        '/mailAnalyzer': (context) => const HomePage(), // consultant main screen
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(), // The main app screen
@@ -58,6 +58,7 @@ class MyApp extends StatelessWidget {
         '/gameLevelTwo': (context) => const GameLevelTwoScreen(),
         '/gameLevelThree': (context) => const GameLevelThreeScreen(),
         '/gameLevelFour': (context) => const GameLevelFourScreen(),
+        '/gameLevelFive': (context) => const GameLevelFiveScreen(),
       },
     );
   }

@@ -5,7 +5,7 @@ class WifiNetwork {
   final bool isTrap; // Is this the Evil Twin?
   final String reasoning;
 
-  // --- NEW DETAIL FIELDS ---
+  // Inner details
   final String securityType; // e.g., "WPA3-Personal", "None"
   final String frequency;    // e.g., "5 GHz", "2.4 GHz"
   final String standard;     // e.g., "Wi-Fi 6 (802.11ax)"

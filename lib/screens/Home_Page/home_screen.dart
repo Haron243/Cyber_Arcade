@@ -125,7 +125,7 @@ class _CustomDrawer extends StatelessWidget {
               const SizedBox(height: 30),
               _drawerItem(context, 'CONSULTANT', () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/consultant');
+                Navigator.pushNamed(context, '/mailAnalyzer');
               }),
               _drawerItem(context, 'NEW GAME', () {}),
               _drawerItem(context, 'SETTINGS', () {}),
