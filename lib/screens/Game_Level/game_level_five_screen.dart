@@ -38,13 +38,15 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with SingleTi
 
   // --- LOGIC ---
 
+  double get _scannerAreaHeight => MediaQuery.of(context).size.height * 0.55;
+
   void _updateLensPosition(DragUpdateDetails details) {
     if (_analysisComplete) return; // Stop moving if done
 
     setState(() {
       // Keep lens within bounds
       double newX = (_lensPosition.dx + details.delta.dx).clamp(0.0, _containerWidth);
-      double newY = (_lensPosition.dy + details.delta.dy).clamp(0.0, _containerHeight);
+      double newY = (_lensPosition.dy + details.delta.dy).clamp(0.0, _scannerAreaHeight);
       _lensPosition = Offset(newX, newY);
     });
 
@@ -56,7 +58,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with SingleTi
     
     // Convert relative target (0.0-1.0) to absolute pixels
     double targetX = scenario.targetPosition.dx * _containerWidth;
-    double targetY = scenario.targetPosition.dy * _containerHeight;
+    double targetY = scenario.targetPosition.dy * _scannerAreaHeight;
 
     // Calculate distance between Lens Center and Target Center
     // Assuming Lens is 150x150, Target is ~100x100
@@ -142,6 +144,10 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with SingleTi
   Widget build(BuildContext context) {
     final scenario = levelFiveData[_currentIndex];
 
+    // This keeps it perfectly sized on all phones.
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double scannerHeight = screenHeight * 0.55;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -158,7 +164,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with SingleTi
                 Expanded(
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: const EdgeInsets.all(20.0),
+                      padding: const EdgeInsets.all(2.0),
                       child: Column(
                         children: [
                           // 1. INSTRUCTION
@@ -178,7 +184,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with SingleTi
 
                           // 2. INTERACTIVE SCANNER AREA
                           Container(
-                            height: _containerHeight,
+                            height: scannerHeight,
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.black,
