@@ -1,10 +1,12 @@
-import 'dart:ui';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:demo_app/widgets/Home_Page/cyber_background.dart';
-import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
-import 'package:demo_app/widgets/Game_Level/cyber_audio_player.dart';
+import 'package:audioplayers/audioplayers.dart'; // Add this package!
 import 'package:demo_app/data/level_three_data.dart';
+import 'package:demo_app/widgets/Game_Level/Level_3/incoming_call_overlay.dart';
+import 'package:demo_app/widgets/Game_Level/Level_3/dialpad_screen.dart';
+import 'package:demo_app/widgets/Game_Level/Level_3/otp_overlay.dart';
 import 'package:demo_app/services/user_progress_service.dart';
+import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
 
 class GameLevelThreeScreen extends StatefulWidget {
   const GameLevelThreeScreen({super.key});
@@ -13,379 +15,294 @@ class GameLevelThreeScreen extends StatefulWidget {
   State<GameLevelThreeScreen> createState() => _GameLevelThreeScreenState();
 }
 
+enum GameState { incoming, connected, finished }
+
 class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
-  int _currentIndex = 0;
+  // Game State
+  late VishingScenario _scenario;
+  GameState _gameState = GameState.incoming;
+  String? _currentStepId;
+  
+  // Logic State
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String _userInputBuffer = ""; // Stores what user types on dialpad
+  bool _showOtpOverlay = false;
+  String _generatedOtp = "847291"; // Default, or randomize
+
+  // Scoring
   int _score = 0;
-  bool? _lastGuessCorrect;
-  bool _showFeedback = false;
+  bool _isWin = false;
+  String _resultMessage = "";
 
-  void _handleGuess(bool userSaidScam) {
-    final currentScenario = levelThreeData[_currentIndex];
-    // Check if user's guess matches the actual nature of the call
-    final isCorrect = currentScenario.isScam == userSaidScam;
-
-    setState(() {
-      _lastGuessCorrect = isCorrect;
-      if (isCorrect) _score += 100;
-      _showFeedback = true;
-    });
-  }
-
-  void _nextScenario() {
-    setState(() {
-      _showFeedback = false;
-      if (_currentIndex < levelThreeData.length - 1) {
-        _currentIndex++;
-      } else {
-        _showSummaryDialog();
-      }
-    });
-  }
-
-  void _showSummaryDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _buildSummaryDialog(),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _pickRandomScenario();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final scenario = levelThreeData[_currentIndex];
+  void dispose() {
+    _audioPlayer.stop();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
+  // --- INITIALIZATION ---
+
+  void _pickRandomScenario() {
+    // Randomly select 'bank_fake' or 'bank_legit' from your data
+    final random = Random();
+    _scenario = levelThreeData[random.nextInt(levelThreeData.length)];
+    _currentStepId = _scenario.initialStepId;
+    _generateRandomOtp();
+    
+    // Debug print
+    print("Selected Scenario: ${_scenario.id} (Scam: ${_scenario.isScam})");
+  }
+
+  void _generateRandomOtp() {
+    // Generate random 6-digit code
+    _generatedOtp = (Random().nextInt(900000) + 100000).toString();
+  }
+
+  // --- AUDIO LOGIC ---
+
+  Future<void> _playStepAudio() async {
+    if (_currentStepId == null) return;
+    
+    final step = _scenario.steps[_currentStepId];
+    if (step == null) return;
+
+    try {
+      // Assumes audio files are in assets/
+      // AudioPlayer usually requires "audio/filename.mp3" if in assets
+      await _audioPlayer.stop(); // Stop previous
+      await _audioPlayer.play(AssetSource(step.audioPath));
+      
+      // Check for auto-actions after audio starts
+      if (step.action == CallAction.otpInput) {
+        setState(() {
+          _showOtpOverlay = true;
+        });
+      } else if (step.autoDisconnect) {
+        // Wait for audio to finish then end call? 
+        // For simplicity, we can let user hang up or use a delay.
+        // Better: Listen to onPlayerComplete.
+        _audioPlayer.onPlayerComplete.listen((event) {
+            if (_gameState == GameState.connected) {
+               _finishGame(isWin: step.isWin, message: step.endMessage ?? "Call Ended");
+            }
+        });
+      }
+    } catch (e) {
+      print("Audio Error: $e");
+    }
+  }
+
+  // --- INTERACTION HANDLERS ---
+
+  void _acceptCall() {
+    setState(() {
+      _gameState = GameState.connected;
+    });
+    _playStepAudio();
+  }
+
+  void _declineCall() {
+    // Declining immediately logic:
+    // If Scam -> Win (You avoided it)
+    // If Legit -> Lose (You missed important call)
+    bool won = _scenario.isScam; 
+    _finishGame(
+      isWin: won,
+      message: won 
+          ? "Good job! You ignored a potential scam." 
+          : "You missed an important call from your bank!",
+    );
+  }
+
+  void _onDialpadKey(String key) {
+    if (_gameState != GameState.connected || _currentStepId == null) return;
+
+    final step = _scenario.steps[_currentStepId];
+    if (step == null) return;
+
+    // 1. HANDLE OTP ENTRY (The Trap)
+    if (step.action == CallAction.otpInput) {
+      _userInputBuffer += key;
+      
+      // If they type 6 digits, check against OTP
+      if (_userInputBuffer.length >= 6) {
+        // If they entered the OTP shown on screen -> THEY LOSE
+        // (Because they shared it with the scammer)
+        _finishGame(
+          isWin: false,
+          message: "You shared your OTP! System Compromised.",
+        );
+      }
+      return;
+    }
+
+    // 2. HANDLE MENU NAVIGATION (Press 1, Press 2)
+    if (step.action == CallAction.keypadInput && step.nextSteps != null) {
+      if (step.nextSteps!.containsKey(key)) {
+        // Move to next step
+        setState(() {
+          _currentStepId = step.nextSteps![key];
+          _userInputBuffer = ""; // Reset buffer
+        });
+        _playStepAudio();
+      }
+    }
+  }
+
+  void _onHangUp() {
+    // Manual Hangup Logic:
+    // If Scam -> Win (Good, you hung up on them)
+    // If Legit -> Lose (Bad, you hung up on real bank)
+    
+    // Exception: If the Legit call was basically "Done" (autoDisconnect state), hanging up is fine.
+    // But usually user hangs up mid-call.
+    
+    final step = _scenario.steps[_currentStepId];
+    bool isSafeToHangUp = step?.autoDisconnect ?? false;
+
+    if (_scenario.isScam) {
+      _finishGame(isWin: true, message: "Excellent! You hung up on a vishing attack.");
+    } else {
+      if (isSafeToHangUp) {
+        _finishGame(isWin: true, message: "Call completed successfully.");
+      } else {
+        _finishGame(isWin: false, message: "You hung up on a legitimate verification call.");
+      }
+    }
+  }
+
+  void _finishGame({required bool isWin, required String message}) {
+    _audioPlayer.stop();
+    setState(() {
+      _gameState = GameState.finished;
+      _isWin = isWin;
+      _score = isWin ? 100 : 0;
+      _resultMessage = message;
+      _showOtpOverlay = false; // Hide if visible
+    });
+  }
+
+  // --- UI BUILD ---
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // 1. Background
-          const CyberBackground(),
-          
-          // 2. Main Content
-          SafeArea(
-            child: Column(
-              children: [
-                // Header (Score & Level)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-                  child: _buildHUD(),
-                ),
+          // 1. THE GAME SCREENS (Switched via Stack or if/else)
+          if (_gameState == GameState.incoming)
+            IncomingCallOverlay(
+              scenario: _scenario,
+              onAccept: _acceptCall,
+              onDecline: _declineCall,
+            ),
 
-                // Scrollable Game Area (Prevents overflow on small screens)
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      child: _showFeedback
-                          ? _buildFeedbackView(scenario) // Result Screen
-                          : _buildCallInterface(scenario), // The "Call" Screen
-                    ),
-                  ),
-                ),
-              ],
+          if (_gameState == GameState.connected)
+            CyberDialpad(
+              onKeyPressed: _onDialpadKey,
+              onEndCall: _onHangUp,
             ),
-          ),
-          
-          // 3. Back Button
-          Positioned(
-            top: 40,
-            left: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.black45,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
+            
+          // 2. OTP OVERLAY (Conditional)
+          if (_gameState == GameState.connected && _showOtpOverlay)
+            OtpOverlay(
+              otpCode: _generatedOtp,
+              onDismiss: () {
+                setState(() => _showOtpOverlay = false);
+              },
             ),
-          ),
+
+          // 3. RESULT OVERLAY (Game Over)
+          if (_gameState == GameState.finished)
+            _buildResultOverlay(),
         ],
       ),
     );
   }
 
-  // --- Widgets ---
-
-  Widget _buildHUD() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.purpleAccent.withOpacity(0.5)),
-          ),
-          child: Text(
-            "LVL 03 // ${_currentIndex + 1}/${levelThreeData.length}",
-            style: const TextStyle(
-              fontFamily: 'Orbitron',
-              color: Colors.purpleAccent,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          "SCORE: $_score",
-          style: const TextStyle(
-            fontFamily: 'Orbitron',
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCallInterface(AudioScenario scenario) {
-    return Column(
-      key: ValueKey(scenario.id),
-      children: [
-        // --- CALLER ID SECTION ---
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white24, width: 2),
-            boxShadow: [
-              BoxShadow(color: Colors.purpleAccent.withOpacity(0.3), blurRadius: 20)
-            ],
-          ),
-          child: const CircleAvatar(
-            radius: 50,
-            backgroundColor: Color(0xFF2D2D2D),
-            child: Icon(Icons.person, size: 60, color: Colors.white70),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          scenario.callerName,
-          style: const TextStyle(
-            fontFamily: 'Orbitron',
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.5,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 5),
-        Text(
-          scenario.phoneNumber,
-          style: const TextStyle(
-            fontFamily: 'Courier',
-            fontSize: 16,
-            color: Colors.white54,
-            letterSpacing: 2,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.greenAccent.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
-          ),
-          child: const Text(
-            "00:14 / CONNECTED",
-            style: TextStyle(
-              color: Colors.greenAccent,
-              fontSize: 10,
-              fontFamily: 'Orbitron',
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 40),
-
-        // --- AUDIO PLAYER ---
-        // This is your custom widget
-        CyberAudioPlayer(
-          assetPath: scenario.audioAssetPath,
-          autoPlay: false, 
-        ),
-
-        const SizedBox(height: 50),
-
-        // --- DECISION BUTTONS ---
-        Row(
-          children: [
-            Expanded(
-              child: _buildDecisionButton(
-                "LEGITIMATE",
-                Colors.greenAccent,
-                Icons.check_circle_outline,
-                () => _handleGuess(false), // User says NOT scam
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: _buildDecisionButton(
-                "SCAM CALL",
-                const Color(0xFFF92444),
-                Icons.warning_amber_rounded,
-                () => _handleGuess(true), // User says SCAM
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDecisionButton(String label, Color color, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
-          border: Border.all(color: color.withOpacity(0.7), width: 2),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: [BoxShadow(color: color.withOpacity(0.15), blurRadius: 15)],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Orbitron',
-                color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeedbackView(AudioScenario scenario) {
-    bool isSuccess = _lastGuessCorrect!;
-    Color statusColor = isSuccess ? Colors.greenAccent : const Color(0xFFF92444);
-
+  Widget _buildResultOverlay() {
+    Color statusColor = _isWin ? Colors.greenAccent : const Color(0xFFff3b30);
+    
     return Container(
-      key: const ValueKey('feedback'),
-      padding: const EdgeInsets.all(25),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor, width: 2),
-        boxShadow: [BoxShadow(color: statusColor.withOpacity(0.2), blurRadius: 30)],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isSuccess ? Icons.verified_user : Icons.error_outline,
-            size: 60,
-            color: statusColor,
-          ),
-          const SizedBox(height: 15),
-          Text(
-            isSuccess ? "ANALYSIS CORRECT" : "INCORRECT ANALYSIS",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Orbitron',
-              color: statusColor,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            scenario.isScam 
-                ? "Target identified as VISHING (Voice Phishing)." 
-                : "Target verified as LEGITIMATE caller.",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white.withOpacity(0.7)),
-          ),
-          const Divider(color: Colors.white24, height: 40),
-          const Text(
-            "SECURITY INTEL:",
-            style: TextStyle(
-              fontFamily: 'Orbitron',
-              color: Colors.cyanAccent,
-              fontSize: 12,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            scenario.educationalReasoning,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 30),
-          CyberButton(
-            text: "CONTINUE",
-            onPressed: _nextScenario,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryDialog() {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-      child: Dialog(
-        backgroundColor: Colors.transparent,
+      color: Colors.black.withOpacity(0.9),
+      child: Center(
         child: Container(
-          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.symmetric(horizontal: 30),
+          padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.9),
+            color: const Color(0xFF1a1a1a),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.purpleAccent),
-            boxShadow: [BoxShadow(color: Colors.purpleAccent.withOpacity(0.3), blurRadius: 20)],
+            border: Border.all(color: statusColor, width: 2),
+            boxShadow: [
+              BoxShadow(color: statusColor.withOpacity(0.3), blurRadius: 30)
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                "OPERATION COMPLETE",
-                style: TextStyle(
-                  fontFamily: 'Orbitron',
-                  color: Colors.white,
-                  fontSize: 22,
-                  letterSpacing: 2,
-                ),
-                textAlign: TextAlign.center,
+              Icon(
+                _isWin ? Icons.verified_user : Icons.warning_amber_rounded,
+                size: 60,
+                color: statusColor,
               ),
               const SizedBox(height: 20),
               Text(
-                "FINAL SCORE: $_score",
-                style: const TextStyle(
+                _isWin ? "MISSION SUCCESS" : "MISSION FAILED",
+                style: TextStyle(
                   fontFamily: 'Orbitron',
-                  color: Colors.purpleAccent,
-                  fontSize: 30,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                _resultMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontSize: 16,
+                  height: 1.5,
+                ),
+              ),
+              const Divider(color: Colors.white24, height: 40),
+              
+              const Text(
+                "INTEL:",
+                style: TextStyle(
+                  fontFamily: 'Orbitron',
+                  color: Colors.cyanAccent,
+                  fontSize: 12,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                _scenario.educationalReasoning,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 30),
+              
               CyberButton(
                 text: "RETURN TO BASE",
                 onPressed: () async {
-                  // --- SAVE PROGRESS FOR LEVEL 3 ---
+                  // Save progress
                   final service = UserProgressService();
                   await service.saveLevelProgress(3, _score);
                   
                   if (context.mounted) {
-                    Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Go back to Hub
+                    Navigator.pop(context); // Close screen
                   }
                 },
               ),
