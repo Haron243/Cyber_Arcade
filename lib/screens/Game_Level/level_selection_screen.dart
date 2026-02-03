@@ -19,12 +19,15 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   bool _isLevel3Locked = true;
   bool _isLevel4Locked = true;
   bool _isLevel5Locked = true;
+  bool _isLevel6Locked = true;
   
   // XP Tracking
   int _level1XP = 0;
   int _level2XP = 0;
   int _level3XP = 0;
   int _level4XP = 0;
+  int _level5XP = 0;
+  int _level6XP = 0;
 
   @override
   void initState() {
@@ -40,12 +43,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     bool lvl3Open = await service.isLevelUnlocked(3);
     bool lvl4Open = await service.isLevelUnlocked(4);
     bool lvl5Open = await service.isLevelUnlocked(5);
+    bool lvl6Open = await service.isLevelUnlocked(6);
     
     // Get Scores
     int xp1 = await service.getLevelXP(1);
     int xp2 = await service.getLevelXP(2);
     int xp3 = await service.getLevelXP(3);
     int xp4 = await service.getLevelXP(4);
+    int xp5 = await service.getLevelXP(5);
 
     if (mounted) {
       setState(() {
@@ -53,10 +58,12 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
         _isLevel3Locked = !lvl3Open;
         _isLevel4Locked = !lvl4Open;
         _isLevel5Locked = !lvl5Open;
+        _isLevel6Locked = !lvl6Open;
         _level1XP = xp1;
         _level2XP = xp2;
         _level3XP = xp3;
         _level4XP = xp4;
+        _level5XP = xp5;
         _isLoading = false;
       });
     }
@@ -178,6 +185,22 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                     route: '/gameLevelFive',
                     isLocked: _isLevel5Locked,
                     xpRequired: 200,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                    // LEVEL 6
+
+                  _buildLevelCard(
+                    context,
+                    title: "LEVEL 06",
+                    subtitle: "FOLLOW THE MONEY // PAYMENT TRACING",
+                    description: "Map the flow of funds to detect unauthorized redirects.",
+                    color: Colors.orangeAccent,
+                    icon: Icons.account_tree, // Represents the node/network path
+                    route: '/gameLevelSix',
+                    isLocked: _isLevel6Locked,
+                    xpRequired: 500, 
                   ),
 
                   const SizedBox(height: 40), // Bottom padding

@@ -9,6 +9,7 @@ class UserProgressService {
     3: 600, 
     4: 100,
     5: 200,
+    6: 300,
   };
 
   // Helper to get threshold for UI
