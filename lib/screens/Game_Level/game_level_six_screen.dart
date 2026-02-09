@@ -14,9 +14,13 @@ class GameLevelSixScreen extends StatefulWidget {
 
 class _GameLevelSixScreenState extends State<GameLevelSixScreen>
     with TickerProviderStateMixin {
+  // --- services --------------------------------------------------------------
+  final UserProgressService _progressService = UserProgressService();
+
   // --- state -----------------------------------------------------------------
   late PaymentScenario _scenario;
   int _scenarioIndex = 0;
+  int _totalXP = 0; // Cumulative XP across all scenarios in this session
 
   final List<Map<String, String>> _connections = [];
   String? _selectedNodeId;
@@ -139,6 +143,27 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
     return null;
   }
 
+  /// Calculate XP for this scenario based on performance
+  int _calculateScenarioXP() {
+    if (!_isSuccess) return 0; // No XP for failed scenarios
+    
+    // Base XP for completing scenario
+    int xp = 100;
+    
+    // Bonus for efficient routing (fewer connections = better)
+    // Optimal path length is usually 2-3 connections
+    final connectionEfficiency = (5 - _connections.length).clamp(0, 3) * 10;
+    xp += connectionEfficiency;
+    
+    // Bonus for unused inspect tokens (shows good judgment)
+    xp += _inspectCount * 15;
+    
+    // Small bonus for each scenario number (harder scenarios worth more)
+    xp += (_scenarioIndex + 1) * 10;
+    
+    return xp.clamp(50, 200); // Min 50, max 200 per scenario
+  }
+
   // --- interaction -----------------------------------------------------------
   void _handleNodeTap(GameNode node) {
     if (_isSimulating || _isGameOver) return;
@@ -215,6 +240,8 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
     });
 
     _moneyController.forward(from: 0).whenComplete(() {
+      final scenarioXP = _calculateScenarioXP();
+      
       setState(() {
         _isSuccess = failureReason == null;
         _resultTitle = _isSuccess ? "PAYMENT SECURE" : "PAYMENT FAILED";
@@ -222,6 +249,13 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
             ? "The payment reached the destination through a verified route."
             : "Your money did not arrive safely. Watch the replay to see where it went.\n\n${failureReason ?? ''}";
         _isGameOver = true;
+        
+        // Add this scenario's XP to total
+        if (_isSuccess) {
+          _totalXP += scenarioXP;
+          // Save progress after each successful scenario (high score system)
+          _progressService.saveLevelProgress(6, _totalXP);
+        }
       });
     });
   }
@@ -316,21 +350,49 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
       ),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF334155),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("GOAL: ",
-                    style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-                Text(_scenario.goal,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF334155),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text("GOAL: ",
+                          style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                      Flexible(
+                        child: Text(_scenario.goal,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Total XP badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [Colors.amber.shade800, Colors.amber.shade600]),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.stars, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text('$_totalXP',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           Text(_scenario.context,
@@ -387,7 +449,7 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
             ),
           ),
           const SizedBox(width: 12),
-          // Send — wraps in LayoutBuilder so we can pass canvas Size to simulation
+          // Send
           Expanded(
             flex: 2,
             child: LayoutBuilder(
@@ -395,10 +457,6 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
                 return ElevatedButton(
                   onPressed: _canSend
                       ? () {
-                          // Walk up the widget tree to grab the full canvas height
-                          // from the Expanded LayoutBuilder above.  We only need width
-                          // here; height comes from the game-canvas constraints cached
-                          // in _waypoints during setState.  Use a safe fallback.
                           final canvasSize = Size(constraints.maxWidth, 640);
                           _startSimulation(canvasSize);
                         }
@@ -547,12 +605,11 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
 
         final leakStartT = _leakIndex != null
             ? (_leakIndex! - 1).clamp(0, _waypoints.length - 2) / (_waypoints.length - 1)
-            : 2.0; // sentinel — never triggers
+            : 2.0;
 
         final leaked = t > leakStartT;
 
         return Stack(children: [
-          // Ghost coin drifts away after the leak point
           if (_leakIndex != null && _leakTarget != null && leaked)
             () {
               final progress = ((t - leakStartT) / (1.0 - leakStartT)).clamp(0.0, 1.0);
@@ -562,7 +619,6 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
                   Colors.red.withOpacity(0.7),
                   1.0 - progress * 0.6);
             }(),
-          // Main coin
           _coin(pos, 30, leaked ? Colors.redAccent : Colors.greenAccent, 1.0),
         ]);
       },
@@ -710,6 +766,7 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
   Widget _buildResultModal() {
     final accent     = _isSuccess ? Colors.greenAccent : Colors.redAccent;
     final accentDark = _isSuccess ? Colors.green       : Colors.red;
+    final scenarioXP = _calculateScenarioXP();
 
     return Positioned.fill(
       child: BackdropFilter(
@@ -752,6 +809,32 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
                               Text("OUTCOME", style: TextStyle(color: accentDark, fontSize: 10, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
                               Text(_resultMessage!, style: const TextStyle(color: Colors.white)),
+                              if (_isSuccess) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text("Scenario XP:", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.stars, color: Colors.amber, size: 16),
+                                        const SizedBox(width: 4),
+                                        Text("+$scenarioXP", 
+                                            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 15)),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text("Total XP:", style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                    Text("$_totalXP", 
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -761,34 +844,20 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
                           height: 50,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(backgroundColor: Colors.blue[600]),
-                            onPressed: () async { // <--- MARK AS ASYNC
-                              
-                              // CASE 1: SUCCESS + NEXT SCENARIO AVAILABLE
+                            onPressed: () {
                               if (_isSuccess && _scenarioIndex < levelSixData.length - 1) {
                                 _loadScenario(_scenarioIndex + 1);
-                              } 
-                              
-                              // CASE 2: FAILED (RETRY SAME SCENARIO)
-                              else if (!_isSuccess) {
+                              } else if (!_isSuccess) {
                                 _loadScenario(_scenarioIndex);
-                              } 
-                              
-                              // CASE 3: LEVEL COMPLETE (LAST SCENARIO FINISHED)
-                              else {
-                                // --- NEW CODE STARTS HERE ---
-                                // Save 500 XP (or whatever score you prefer) for completing Level 6
-                                final service = UserProgressService();
-                                await service.saveLevelProgress(6, 500);
-                                
-                                if (context.mounted) {
-                                  Navigator.pop(context); // Return to Menu
-                                }
-                                // --- NEW CODE ENDS HERE ---
+                              } else {
+                                // Level complete - final save happens here too (redundant but safe)
+                                _progressService.saveLevelProgress(6, _totalXP);
+                                if (context.mounted) Navigator.pop(context);
                               }
                             },
                             child: Text(
                                 _isSuccess && _scenarioIndex < levelSixData.length - 1 ? "NEXT SCENARIO"
-                                    : (!_isSuccess ? "RETRY" : "FINISH LEVEL"), // Changed text slightly
+                                    : (!_isSuccess ? "RETRY" : "FINISH LEVEL"),
                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                           ),
                         ),
@@ -865,7 +934,6 @@ class ConnectionPainter extends CustomPainter {
       return (_unknownTypes.contains(from.type) || _unknownTypes.contains(to.type))
           ? Colors.amber : const Color(0xFF475569);
 
-    // On the active path?
     final k1 = '${from.id}->${to.id}';
     final k2 = '${to.id}->${from.id}';
     for (int i = 0; i < pathIds.length - 1; i++) {

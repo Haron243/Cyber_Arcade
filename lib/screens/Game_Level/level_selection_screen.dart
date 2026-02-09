@@ -20,6 +20,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   bool _isLevel4Locked = true;
   bool _isLevel5Locked = true;
   bool _isLevel6Locked = true;
+  bool _isLevel7Locked = true;
   
   // XP Tracking
   int _level1XP = 0;
@@ -28,6 +29,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   int _level4XP = 0;
   int _level5XP = 0;
   int _level6XP = 0;
+  int _level7XP = 0;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     bool lvl4Open = await service.isLevelUnlocked(4);
     bool lvl5Open = await service.isLevelUnlocked(5);
     bool lvl6Open = await service.isLevelUnlocked(6);
+    bool lvl7Open = await service.isLevelUnlocked(7);
     
     // Get Scores
     int xp1 = await service.getLevelXP(1);
@@ -51,6 +54,8 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     int xp3 = await service.getLevelXP(3);
     int xp4 = await service.getLevelXP(4);
     int xp5 = await service.getLevelXP(5);
+    int xp6 = await service.getLevelXP(6);
+    int xp7 = await service.getLevelXP(7);
 
     if (mounted) {
       setState(() {
@@ -59,11 +64,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
         _isLevel4Locked = !lvl4Open;
         _isLevel5Locked = !lvl5Open;
         _isLevel6Locked = !lvl6Open;
+        _isLevel7Locked = !lvl7Open;
         _level1XP = xp1;
         _level2XP = xp2;
         _level3XP = xp3;
         _level4XP = xp4;
         _level5XP = xp5;
+        _level6XP = xp6;
+        _level7XP = xp7;
         _isLoading = false;
       });
     }
@@ -200,6 +208,22 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
                     icon: Icons.account_tree, // Represents the node/network path
                     route: '/gameLevelSix',
                     isLocked: _isLevel6Locked,
+                    xpRequired: 500, 
+                  ),
+
+                  const SizedBox(height: 20),
+
+                    // LEVEL 7
+
+                  _buildLevelCard(
+                    context,
+                    title: "LEVEL 07",
+                    subtitle: "APP ANALYSIS // MALWARE DETECTION",
+                    description: "Reverse-engineer a suspicious app to identify hidden malicious behaviors.",
+                    color: const Color.fromARGB(255, 255, 230, 64),
+                    icon: Icons.adb_outlined, // Represents the node/network path
+                    route: '/gameLevelSeven',
+                    isLocked: _isLevel7Locked,
                     xpRequired: 500, 
                   ),
 
