@@ -40,6 +40,7 @@ dependencies:
   shared_preferences: ^2.2.3
   audioplayers: ^6.0.0
   qr_flutter: ^4.1.0
+  sensors_plus: ^6.1.0  # Check for the latest version
 
 dev_dependencies:
   flutter_test:
