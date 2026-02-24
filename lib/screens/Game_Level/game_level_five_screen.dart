@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:math'; // Added for random calculations
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:sensors_plus/sensors_plus.dart'; // <--- IMPORT THIS
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_background.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
 import 'package:demo_app/data/level_five_data.dart';
@@ -21,8 +22,12 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
 
   // --- AR Camera State ---
   Offset _cameraOffset = Offset.zero; 
-  final double _zoomLevel = 1.6; // Slightly higher zoom for better gyro movement
-  StreamSubscription<GyroscopeEvent>? _gyroSubscription; // <--- Gyro Listener
+  // INCREASED ZOOM: Gives more panning room and makes the QR code larger
+  final double _zoomLevel = 2.4; 
+  StreamSubscription<GyroscopeEvent>? _gyroSubscription; 
+  
+  // Store a random pixel offset from the center
+  late Offset _randomCenterOffset;
   
   // --- Game State ---
   bool _isScanning = false;
@@ -39,6 +44,8 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   @override
   void initState() {
     super.initState();
+    _generateRandomTarget(); // Generate the first position
+
     _scanLineController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -46,32 +53,41 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     
     _scanLineAnimation = Tween<double>(begin: 0.1, end: 0.9).animate(_scanLineController);
 
-    // --- START GYRO LISTENER ---
     _initGyroscope();
   }
 
+  // Generates a point within a safe, reachable radius of the center
+  void _generateRandomTarget() {
+    final random = Random();
+    
+    // 1. Generate a random angle (0 to 360 degrees in radians)
+    double angle = random.nextDouble() * 2 * pi;
+    
+    // 2. SAFE RADIUS: Reduced to 100 pixels to ensure it never spawns outside the pan limits
+    double radius = sqrt(random.nextDouble()) * 100; 
+    
+    // 3. Convert polar coordinates to X and Y offsets
+    double dx = radius * cos(angle);
+    double dy = radius * sin(angle);
+
+    _randomCenterOffset = Offset(dx, dy);
+  }
+
   void _initGyroscope() {
-    // Listen to gyro events
     _gyroSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
       if (_analysisComplete || _showTutorial || !mounted) return;
 
-      // Sensitivity Factor: Controls how fast the camera moves
-      // BGMI players usually like this high (around 3.0 - 5.0)
-      const double sensitivity = 15.0; 
+      // SENSITIVITY: Increased to 25.0 so the user doesn't have to break their wrists turning
+      const double sensitivity = 25.0; 
 
       setState(() {
-        // Calculate the Viewport Size (approximated for logic)
         final size = MediaQuery.of(context).size;
         final viewportWidth = size.width;
         final viewportHeight = size.height * 0.6; // 60% of screen
 
-        // Calculate Limits (how far can we scroll)
+        // Calculate Limits based on the new zoom
         double limitX = (viewportWidth * _zoomLevel - viewportWidth) / 2;
         double limitY = (viewportHeight * _zoomLevel - viewportHeight) / 2;
-
-        // Apply Gyro Rotation to Offset
-        // event.y = Rotation around Y axis (Tilting Left/Right) -> Controls X movement
-        // event.x = Rotation around X axis (Tilting Up/Down)    -> Controls Y movement
         
         double newDx = _cameraOffset.dx + (event.y * sensitivity);
         double newDy = _cameraOffset.dy + (event.x * sensitivity);
@@ -83,7 +99,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
         );
       });
 
-      // Check for QR alignment continuously
       _checkAlignment(MediaQuery.of(context).size);
     });
   }
@@ -91,33 +106,26 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   @override
   void dispose() {
     _scanLineController.dispose();
-    _gyroSubscription?.cancel(); // <--- Stop listening to save battery
+    _gyroSubscription?.cancel();
     super.dispose();
   }
 
   // --- LOGIC ---
 
-  // NOTE: I removed _onPanUpdate because we are using Gyro now.
-  // If you want BOTH (Touch + Gyro), you can add GestureDetector back.
-
   void _checkAlignment(Size screenSize) {
     if (_showTutorial || _analysisComplete) return;
 
-    final scenario = levelFiveData[_currentIndex];
-    
-    // We need consistent sizes for math
     final double viewportHeight = screenSize.height * 0.6;
 
     // 1. Calculate Image Dimensions
     double imgWidth = screenSize.width * _zoomLevel;
     double imgHeight = viewportHeight * _zoomLevel;
     
-    // 2. Calculate QR Position relative to Image Top-Left
-    double qrImgX = scenario.targetPosition.dx * imgWidth;
-    double qrImgY = scenario.targetPosition.dy * imgHeight;
+    // 2. Calculate QR Position relative to Image Center + Random Offset
+    double qrImgX = (imgWidth / 2) + (_randomCenterOffset.dx * _zoomLevel);
+    double qrImgY = (imgHeight / 2) + (_randomCenterOffset.dy * _zoomLevel);
     
     // 3. Calculate Image Top-Left relative to Viewport Center
-    // (We account for the camera offset here)
     double imgLeft = (screenSize.width - imgWidth) / 2 + _cameraOffset.dx;
     double imgTop = (viewportHeight - imgHeight) / 2 + _cameraOffset.dy;
     
@@ -189,6 +197,8 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
       _scanProgress = 0.0;
       _cameraOffset = Offset.zero;
       
+      _generateRandomTarget(); // Generate new random spot for the next level
+      
       if (_currentIndex < levelFiveData.length - 1) {
         _currentIndex++;
       } else {
@@ -210,8 +220,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   @override
   Widget build(BuildContext context) {
     final scenario = levelFiveData[_currentIndex];
-    // We don't use GestureDetector anymore for the main logic
-    // but the layout remains the same.
     
     return Scaffold(
       backgroundColor: Colors.black,
@@ -230,7 +238,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                 ),
               ),
 
-              // 2. AR CAMERA VIEWPORT (GYRO CONTROLLED)
+              // 2. AR CAMERA VIEWPORT
               Expanded(
                 flex: 6, 
                 child: Container(
@@ -241,7 +249,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                     borderRadius: BorderRadius.circular(20),
                     color: Colors.black,
                   ),
-                  // We remove GestureDetector here because Gyro handles movement
                   child: LayoutBuilder( 
                     builder: (context, constraints) {
                       return Stack(
@@ -249,7 +256,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                         children: [
                           // A. The "World" (Image + QR)
                           Transform.translate(
-                            offset: _cameraOffset, // Controlled by Gyro
+                            offset: _cameraOffset, 
                             child: Transform.scale(
                               scale: _zoomLevel,
                               child: Stack(
@@ -261,16 +268,16 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                                       fit: BoxFit.cover,
                                       loadingBuilder: (ctx, child, progress) {
                                         if (progress == null) return child;
-                                        return Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+                                        return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
                                       },
                                       errorBuilder: (ctx, err, stack) => Container(color: Colors.grey[900]),
                                     ),
                                   ),
                                   
-                                  // QR Sticker 
+                                  // QR Sticker (Anchored to Center + Random Offset)
                                   Positioned(
-                                    left: scenario.targetPosition.dx * constraints.maxWidth - 40,
-                                    top: scenario.targetPosition.dy * constraints.maxHeight - 40,
+                                    left: (constraints.maxWidth / 2) + _randomCenterOffset.dx - 40,
+                                    top: (constraints.maxHeight / 2) + _randomCenterOffset.dy - 40,
                                     child: _buildQrSticker(scenario.qrUrl),
                                   ),
                                 ],
@@ -375,10 +382,10 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                       const SizedBox(height: 20),
                       const Row(
                         children: [
-                          Icon(Icons.threed_rotation, color: Colors.cyanAccent, size: 20), // New Icon
+                          Icon(Icons.threed_rotation, color: Colors.cyanAccent, size: 20),
                           SizedBox(width: 10),
                           Text(
-                            "TILT PHONE TO AIM CAMERA", // Updated Text
+                            "TILT PHONE TO AIM CAMERA", 
                             style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -399,7 +406,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     );
   }
 
-  // --- SUB WIDGETS (Same as before) ---
+  // --- SUB WIDGETS ---
   
   Widget _buildQrSticker(String data) {
     return Transform.rotate(
@@ -418,10 +425,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   }
 
   Widget _buildAnalysisReport(QrScenario scenario) {
-    // ... (Keep existing implementation)
-    // For brevity, I'm assuming you have the previous code for this part.
-    // If you need it re-pasted, let me know. 
-    // It is identical to the previous version.
      final int riskScore = scenario.analysis['riskScore'];
     Color riskColor = riskScore > 50 ? const Color(0xFFF92444) : Colors.greenAccent;
 
@@ -435,7 +438,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
           const Text("SCAN COMPLETE", style: TextStyle(fontFamily: 'Orbitron', fontSize: 20, color: Colors.white)),
           const SizedBox(height: 24),
           
-          // Data Table
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -487,7 +489,6 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     );
   }
   
-  // Helper for Analysis Report
   Widget _buildDataRow(String label, String value, {Color? color}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
