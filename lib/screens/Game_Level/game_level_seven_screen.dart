@@ -25,6 +25,7 @@ class _GameLevelSevenScreenState extends State<GameLevelSevenScreen> {
   // --- Scenario state ---
   late VettingScenario _scenario;
   int _scenarioIndex = 0;
+  int _totalXP = 0; //to store the total exp
 
   // --- Game state ---
   late int _tokensRemaining;
@@ -117,7 +118,8 @@ class _GameLevelSevenScreenState extends State<GameLevelSevenScreen> {
 
     final xp = _calculateXP();
     // Save progress for this level
-    _progressService.saveLevelProgress(7, xp);
+    _totalXP += xp;
+    _progressService.saveLevelProgress(7, _totalXP);
 
     setState(() {
       _gameOver = true;

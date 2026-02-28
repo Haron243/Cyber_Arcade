@@ -14,6 +14,7 @@ import 'package:demo_app/screens/Game_Level/game_level_four_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_five_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_six_screen.dart';
 import 'package:demo_app/screens/Game_Level/game_level_seven_screen.dart';
+import 'package:demo_app/screens/Game_Level/game_level_eight_screen.dart';
 import 'package:demo_app/screens/Game_Level/level_selection_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
@@ -62,6 +63,7 @@ class MyApp extends StatelessWidget {
         '/gameLevelFive': (context) => const GameLevelFiveScreen(),
         '/gameLevelSix': (context) => const GameLevelSixScreen(),
         '/gameLevelSeven': (context) => const GameLevelSevenScreen(),
+        '/gameLevelEight': (context) => const GameLevelEightScreen(),
 
       },
     );
