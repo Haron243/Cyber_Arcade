@@ -26,12 +26,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   // XP Tracking
   int _level1XP = 0;
   int _level2XP = 0;
-  int _level3XP = 0;
-  int _level4XP = 0;
-  int _level5XP = 0;
-  int _level6XP = 0;
-  int _level7XP = 0;
-  int _level8XP = 0;
+
+  // to show level progress needed to unlock future levels
+  // int _level3XP = 0;
+  // int _level4XP = 0;
+  // int _level5XP = 0;
+  // int _level6XP = 0;
+  // int _level7XP = 0;
+  // int _level8XP = 0;
 
   @override
   void initState() {
@@ -55,12 +57,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
     // Get Scores
     int xp1 = await service.getLevelXP(1);
     int xp2 = await service.getLevelXP(2);
-    int xp3 = await service.getLevelXP(3);
-    int xp4 = await service.getLevelXP(4);
-    int xp5 = await service.getLevelXP(5);
-    int xp6 = await service.getLevelXP(6);
-    int xp7 = await service.getLevelXP(7);
-    int xp8 = await service.getLevelXP(8);
+
+    // to get future scores from sharedPreference
+    // int xp3 = await service.getLevelXP(3);
+    // int xp4 = await service.getLevelXP(4);
+    // int xp5 = await service.getLevelXP(5);
+    // int xp6 = await service.getLevelXP(6);
+    // int xp7 = await service.getLevelXP(7);
+    // int xp8 = await service.getLevelXP(8);
 
     if (mounted) {
       setState(() {
@@ -74,12 +78,14 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
         
         _level1XP = xp1;
         _level2XP = xp2;
-        _level3XP = xp3;
-        _level4XP = xp4;
-        _level5XP = xp5;
-        _level6XP = xp6;
-        _level7XP = xp7;
-        _level8XP = xp8;
+
+        // for future levels
+        // _level3XP = xp3;
+        // _level4XP = xp4;
+        // _level5XP = xp5;
+        // _level6XP = xp6;
+        // _level7XP = xp7;
+        // _level8XP = xp8;
         _isLoading = false;
       });
     }

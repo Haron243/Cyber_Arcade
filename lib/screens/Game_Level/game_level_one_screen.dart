@@ -13,15 +13,7 @@ class GameLevelOneScreen extends StatefulWidget {
 class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
   int _currentIndex = 0;
   int _score = 0;
-  bool? _lastGuessCorrect; // null = neutral, true = happy, false = stressed
-
-  // Logic to determine which character image to show
-  String _getCharacterImage() {
-    if (_lastGuessCorrect == null) return 'assets/images/character_neutral.png';
-    return _lastGuessCorrect!
-        ? 'assets/images/character_happy.png'
-        : 'assets/images/character_stressed.png';
-  }
+  bool? _lastGuessCorrect; // null = neutral, true = correct, false = wrong
 
   void _handleGuess(bool userSaysLegit) {
     final isActuallyLegit = !levelOneData[_currentIndex].isPhishing;
@@ -37,7 +29,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
     if (_currentIndex < levelOneData.length - 1) {
       setState(() {
         _currentIndex++;
-        _lastGuessCorrect = null; // Reset character
+        _lastGuessCorrect = null; // Reset for the next question
       });
     } else {
       await _finishLevel();
@@ -58,7 +50,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
             backgroundColor: Colors.black87,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Colors.greenAccent),
+              side: const BorderSide(color: Colors.cyanAccent),
             ),
             title: const Text(
               "MISSION COMPLETE",
@@ -74,7 +66,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
                   style: const TextStyle(
                       fontFamily: 'Orbitron',
                       fontSize: 40,
-                      color: Colors.greenAccent,
+                      color: Colors.cyanAccent,
                       fontWeight: FontWeight.bold),
                 ),
               ],
@@ -85,7 +77,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
                   Navigator.pop(context); // Close dialog
                   Navigator.pop(context); // Exit level
                 },
-                child: const Text("CONTINUE", style: TextStyle(color: Colors.greenAccent)),
+                child: const Text("CONTINUE", style: TextStyle(color: Colors.cyanAccent)),
               )
             ],
           ),
@@ -105,75 +97,43 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
           Positioned.fill(
             child: Image.asset(
               'assets/images/game_background.png',
-              fit: BoxFit.cover,
+              fit: BoxFit.cover, // Ensures the background scales perfectly
             ),
           ),
 
-          // 2. Character Layer (Bottom Left)
-          Positioned(
-            bottom: 0,
-            left: 0, // Align to left edge
-            height: MediaQuery.of(context).size.height * 0.60, // 60% of screen height
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: Image.asset(
-                _getCharacterImage(),
-                key: ValueKey(_lastGuessCorrect), // Animate changes
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-
-          // 3. UI Layer (Scrollable to prevent overflow)
+          // 2. UI Layer
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // --- HUD ---
-                  _buildHUD(),
+            child: Column(
+              children: [
+                // --- Top Bar HUD ---
+                _buildTopBar(context),
 
-                  const SizedBox(height: 20),
-
-                  // Spacer replacement: Push content down slightly
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-
-                  // --- Game Card ---
-                  // Align to center-right so we don't block the character
-                  Align(
-                    alignment: Alignment.centerRight, 
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width > 600 
-                          ? 400 // Max width for tablets
-                          : MediaQuery.of(context).size.width * 0.9, 
-                      
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 400),
-                        child: _lastGuessCorrect == null
-                            ? _buildQuestionCard(currentCard)
-                            : _buildFeedbackCard(currentCard),
+                // --- Centered Game Card ---
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20.0),
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width > 600 
+                            ? 450 // Max width for tablets/desktop
+                            : MediaQuery.of(context).size.width * 0.9, 
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 400),
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(scale: animation, child: child),
+                            );
+                          },
+                          child: _lastGuessCorrect == null
+                              ? _buildQuestionCard(currentCard)
+                              : _buildFeedbackCard(currentCard),
+                        ),
                       ),
                     ),
                   ),
-
-                  // Bottom padding to ensure scrolling clears the bottom
-                  const SizedBox(height: 50),
-                ],
-              ),
-            ),
-          ),
-          
-          // 4. Back Button (Top Left)
-          Positioned(
-            top: 40,
-            left: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.black54,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -181,52 +141,82 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
     );
   }
 
-  Widget _buildHUD() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end, // Push HUD to right
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white24),
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Back Button
+          CircleAvatar(
+            backgroundColor: Colors.black.withOpacity(0.6),
+            radius: 22,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
-          child: Text(
-            "${_currentIndex + 1} / ${levelOneData.length}",
-            style: const TextStyle(fontFamily: 'Orbitron', color: Colors.white),
+          
+          // HUD Pills
+          Row(
+            children: [
+              // Progress Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white24),
+                ),
+                child: Text(
+                  "${_currentIndex + 1} / ${levelOneData.length}",
+                  style: const TextStyle(
+                    fontFamily: 'Orbitron', 
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Score Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.cyanAccent.withOpacity(0.6), width: 1.5),
+                ),
+                child: Text(
+                  "SCORE: $_score",
+                  style: const TextStyle(
+                      fontFamily: 'Orbitron',
+                      color: Colors.cyanAccent,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2),
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black54,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
-          ),
-          child: Text(
-            "SCORE: $_score",
-            style: const TextStyle(
-                fontFamily: 'Orbitron',
-                color: Colors.greenAccent,
-                fontSize: 16,
-                fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildQuestionCard(WebsiteCard card) {
     return Container(
       key: const ValueKey('question'),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(25),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20, spreadRadius: 5),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4), 
+            blurRadius: 30, 
+            spreadRadius: 5,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Column(
@@ -234,26 +224,32 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
         children: [
           const Text(
             "IS THIS URL SAFE?",
-            style: TextStyle(fontFamily: 'Orbitron', color: Colors.black54, letterSpacing: 2),
+            style: TextStyle(
+              fontFamily: 'Orbitron', 
+              color: Colors.black87, 
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 25),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 18),
             decoration: BoxDecoration(
               color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.grey[400]!),
             ),
             child: Row(
               children: [
-                const Icon(Icons.lock, size: 16, color: Colors.grey),
-                const SizedBox(width: 10),
+                const Icon(Icons.lock, size: 20, color: Colors.grey),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     card.url,
                     style: const TextStyle(
                         fontFamily: 'Courier',
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87),
                     overflow: TextOverflow.ellipsis,
@@ -262,12 +258,12 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 35),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _gameButton("LEGIT", Colors.green, () => _handleGuess(true)),
-              _gameButton("SCAM", Colors.red, () => _handleGuess(false)),
+              _gameButton("LEGIT", const Color(0xFF4CAF50), () => _handleGuess(true)), // Material Green
+              _gameButton("SCAM", const Color(0xFFF44336), () => _handleGuess(false)), // Material Red
             ],
           )
         ],
@@ -277,50 +273,66 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
 
   Widget _buildFeedbackCard(WebsiteCard card) {
     final bool isSuccess = _lastGuessCorrect!;
-    final Color statusColor = isSuccess ? Colors.green : Colors.red;
+    final Color statusColor = isSuccess ? Colors.greenAccent : Colors.redAccent;
 
     return Container(
       key: const ValueKey('feedback'),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.9),
+        color: Colors.black.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: statusColor, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.2), 
+            blurRadius: 30, 
+            spreadRadius: 5,
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isSuccess ? Icons.check_circle_outline : Icons.cancel_outlined,
-            size: 60,
+            size: 70,
             color: statusColor,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
           Text(
             isSuccess ? "CORRECT!" : "WRONG!",
             style: TextStyle(
                 fontFamily: 'Orbitron',
-                fontSize: 24,
+                fontSize: 26,
                 color: statusColor,
-                fontWeight: FontWeight.bold),
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           Text(
             card.reasoning,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, height: 1.4, fontSize: 13),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9), 
+              height: 1.5, 
+              fontSize: 15
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: _nextCard,
-              child: const Text("NEXT", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                "NEXT", 
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)
+              ),
             ),
           )
         ],
@@ -329,15 +341,29 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
   }
 
   Widget _gameButton(String text, Color color, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: ElevatedButton(
+          onPressed: onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            elevation: 4,
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontFamily: 'Orbitron', 
+              color: Colors.white, 
+              fontSize: 16, 
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1
+            )
+          ),
+        ),
       ),
-      child: Text(text,
-          style: const TextStyle(fontFamily: 'Orbitron', color: Colors.white, fontSize: 14)),
     );
   }
 }
