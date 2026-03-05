@@ -25,15 +25,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _errorMessage = 'Passwords do not match.');
       return;
     }
+    
+    // Check if password is at least 6 characters (Firebase requirement)
+    if (_passwordController.text.length < 6) {
+      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+      return;
+    }
+
     final success = await _authService.registerUser(
       _emailController.text,
       _passwordController.text,
     );
+    
     if (success) {
-      // Navigate to login after successful registration
       Navigator.pop(context); 
     } else {
-      setState(() => _errorMessage = 'Registration failed. Try again.');
+      setState(() => _errorMessage = 'Registration failed. Email might be in use.');
     }
   }
 
@@ -78,7 +85,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
-   Widget _buildTextField({required TextEditingController controller, required String hint, bool obscure = false}) {
+  
+  Widget _buildTextField({required TextEditingController controller, required String hint, bool obscure = false}) {
     return TextField(
       controller: controller,
       obscureText: obscure,

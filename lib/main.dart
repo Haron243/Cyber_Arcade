@@ -19,7 +19,19 @@ import 'package:demo_app/screens/Game_Level/level_selection_screen.dart';
 // For the API Key
 import 'package:demo_app/const.dart'; 
 
-void main() {
+// importing firebase folders
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  // 1. Ensure Flutter bindings are initialized before calling Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Initialize Firebase using the generated file
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Initialize the Gemini API
   Gemini.init(apiKey: GEMINI_API_KEY);
   

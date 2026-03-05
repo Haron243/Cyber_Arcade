@@ -1,52 +1,74 @@
 // File: lib/services/user_progress_service.dart
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserProgressService {
-  // CONFIGURATION: setting xp requirements for unlocking levels
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   
   static final Map<int, int> _unlockRequirements = {
-    2: 500, 
-    3: 600, 
-    4: 100,
-    5: 200,
-    6: 300,
-    7: 300,
-    8: 90,
+    2: 500, 3: 600, 4: 100, 5: 200, 6: 300, 7: 300, 8: 90,
   };
 
-  // Helper to get threshold for UI
-  static const int levelOneThreshold = 500; // Keep for backward compatibility if needed
+  static const int levelOneThreshold = 500; 
 
-  /// Save the score for a specific level.
+  /// Save the score for a specific level to Firestore
   Future<void> saveLevelProgress(int level, int earnedXP) async {
-    final prefs = await SharedPreferences.getInstance();
-    String key = 'level_${level}_xp'; // Dynamic key generation
+    final User? user = _auth.currentUser;
+    if (user == null) return;
 
-    int currentXP = prefs.getInt(key) ?? 0;
+    final docRef = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('levels')
+        .doc('level_$level');
+
+    int currentXP = await getLevelXP(level);
     
     // High Score System: Only save if better
     if (earnedXP > currentXP) {
-      await prefs.setInt(key, earnedXP);
+      await docRef.set({
+        'level': level,
+        'xp': earnedXP,
+        'lastPlayed': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Update total overall XP profile
+      await _firestore.collection('users').doc(user.uid).set({
+        'totalXp': FieldValue.increment(earnedXP - currentXP),
+        'lastActive': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     }
   }
 
-  /// Get the current XP for a level
+  /// Get the current XP for a level from Firestore
   Future<int> getLevelXP(int level) async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('level_${level}_xp') ?? 0;
+    final User? user = _auth.currentUser;
+    if (user == null) return 0;
+
+    try {
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('levels')
+          .doc('level_$level')
+          .get();
+
+      if (doc.exists && doc.data() != null) {
+        return doc.data()!['xp'] ?? 0;
+      }
+    } catch (e) {
+      print("Error fetching XP: $e");
+    }
+    return 0;
   }
 
   /// Check if a level is unlocked
   Future<bool> isLevelUnlocked(int level) async {
-    // Level 1 is always open
     if (level <= 1) return true;
 
-    // To unlock Level [level], you need enough XP in Level [level - 1]
     int previousLevel = level - 1;
-    
-    // Get the requirement defined in our map. Default to 999999 (impossible) if missing.
     int requiredXP = _unlockRequirements[level] ?? 999999;
-
     int previousLevelXP = await getLevelXP(previousLevel);
 
     return previousLevelXP >= requiredXP;
