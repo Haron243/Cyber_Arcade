@@ -73,33 +73,40 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     _randomCenterOffset = Offset(dx, dy);
   }
 
+  // NEW HELPER: Handles moving the camera securely within limits for BOTH Gyro and Touch
+  void _updateCameraOffset(double deltaX, double deltaY) {
+    if (!mounted) return;
+    
+    final size = MediaQuery.of(context).size;
+    final viewportWidth = size.width;
+    final viewportHeight = size.height * 0.6; // 60% of screen
+
+    // Calculate Limits based on the zoom
+    double limitX = (viewportWidth * _zoomLevel - viewportWidth) / 2;
+    double limitY = (viewportHeight * _zoomLevel - viewportHeight) / 2;
+
+    setState(() {
+      _cameraOffset = Offset(
+        (_cameraOffset.dx + deltaX).clamp(-limitX, limitX),
+        (_cameraOffset.dy + deltaY).clamp(-limitY, limitY),
+      );
+    });
+
+    _checkAlignment(size);
+  }
+
   void _initGyroscope() {
     _gyroSubscription = gyroscopeEvents.listen((GyroscopeEvent event) {
       if (_analysisComplete || _showTutorial || !mounted) return;
 
-      // SENSITIVITY: Increased to 25.0 so the user doesn't have to break their wrists turning
+      // SENSITIVITY
       const double sensitivity = 25.0; 
-
-      setState(() {
-        final size = MediaQuery.of(context).size;
-        final viewportWidth = size.width;
-        final viewportHeight = size.height * 0.6; // 60% of screen
-
-        // Calculate Limits based on the new zoom
-        double limitX = (viewportWidth * _zoomLevel - viewportWidth) / 2;
-        double limitY = (viewportHeight * _zoomLevel - viewportHeight) / 2;
-        
-        double newDx = _cameraOffset.dx + (event.y * sensitivity);
-        double newDy = _cameraOffset.dy + (event.x * sensitivity);
-
-        // Clamp to keep image inside the box
-        _cameraOffset = Offset(
-          newDx.clamp(-limitX, limitX),
-          newDy.clamp(-limitY, limitY),
-        );
-      });
-
-      _checkAlignment(MediaQuery.of(context).size);
+      
+      // Calculate delta from gyro and feed to the shared offset updater
+      double dx = event.y * sensitivity;
+      double dy = event.x * sensitivity;
+      
+      _updateCameraOffset(dx, dy);
     });
   }
 
@@ -251,117 +258,125 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                   ),
                   child: LayoutBuilder( 
                     builder: (context, constraints) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // A. The "World" (Image + QR)
-                          Transform.translate(
-                            offset: _cameraOffset, 
-                            child: Transform.scale(
-                              scale: _zoomLevel,
+                      // ADDED: GestureDetector to support drag/touch controls
+                      return GestureDetector(
+                        onPanUpdate: (details) {
+                          if (_analysisComplete || _showTutorial) return;
+                          // Pass touch drag delta directly to our shared movement logic
+                          _updateCameraOffset(details.delta.dx, details.delta.dy);
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // A. The "World" (Image + QR)
+                            Transform.translate(
+                              offset: _cameraOffset, 
+                              child: Transform.scale(
+                                scale: _zoomLevel,
+                                child: Stack(
+                                  children: [
+                                    // Context Image
+                                    Positioned.fill(
+                                      child: Image.network(
+                                        scenario.contextImageUrl,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (ctx, child, progress) {
+                                          if (progress == null) return child;
+                                          return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
+                                        },
+                                        errorBuilder: (ctx, err, stack) => Container(color: Colors.grey[900]),
+                                      ),
+                                    ),
+                                    
+                                    // QR Sticker (Anchored to Center + Random Offset)
+                                    Positioned(
+                                      left: (constraints.maxWidth / 2) + _randomCenterOffset.dx - 40,
+                                      top: (constraints.maxHeight / 2) + _randomCenterOffset.dy - 40,
+                                      child: _buildQrSticker(scenario.qrUrl),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                      
+                            // B. Viewfinder Overlay
+                            ColorFiltered(
+                              colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
                               child: Stack(
+                                fit: StackFit.expand,
                                 children: [
-                                  // Context Image
-                                  Positioned.fill(
-                                    child: Image.network(
-                                      scenario.contextImageUrl,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (ctx, child, progress) {
-                                        if (progress == null) return child;
-                                        return const Center(child: CircularProgressIndicator(color: Colors.cyanAccent));
-                                      },
-                                      errorBuilder: (ctx, err, stack) => Container(color: Colors.grey[900]),
+                                  Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black,
+                                      backgroundBlendMode: BlendMode.dstOut,
                                     ),
                                   ),
-                                  
-                                  // QR Sticker (Anchored to Center + Random Offset)
-                                  Positioned(
-                                    left: (constraints.maxWidth / 2) + _randomCenterOffset.dx - 40,
-                                    top: (constraints.maxHeight / 2) + _randomCenterOffset.dy - 40,
-                                    child: _buildQrSticker(scenario.qrUrl),
+                                  Center(
+                                    child: Container(
+                                      width: 220, height: 220,
+                                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
-
-                          // B. Viewfinder Overlay
-                          ColorFiltered(
-                            colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcOut),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Container(
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black,
-                                    backgroundBlendMode: BlendMode.dstOut,
-                                  ),
-                                ),
-                                Center(
-                                  child: Container(
-                                    width: 220, height: 220,
-                                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // C. HUD Elements
-                          Center(
-                            child: Container(
-                              width: 220, height: 220,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: _isScanning ? Colors.greenAccent : Colors.cyanAccent.withOpacity(0.5),
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Stack(
-                                children: [
-                                  const Positioned(top: 10, left: 10, child: Icon(Icons.crop_free, color: Colors.white, size: 30)),
-                                  const Positioned(bottom: 10, right: 10, child: Icon(Icons.crop_free, color: Colors.white, size: 30)),
-                                  
-                                  if (_isScanning)
-                                    AnimatedBuilder(
-                                      animation: _scanLineAnimation,
-                                      builder: (context, child) {
-                                        return Align(
-                                          alignment: Alignment(0, _scanLineAnimation.value * 2 - 1),
-                                          child: Container(
-                                            height: 2, width: double.infinity,
-                                            decoration: const BoxDecoration(
-                                              color: Colors.redAccent,
-                                              boxShadow: [BoxShadow(color: Colors.red, blurRadius: 5)],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ),
-
-                          // D. Scanning Text
-                          if (_isScanning)
-                            Positioned(
-                              top: 20,
+                      
+                            // C. HUD Elements
+                            Center(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-                                child: Text("ANALYZING... ${(_scanProgress * 100).toInt()}%",
-                                  style: const TextStyle(color: Colors.greenAccent, fontFamily: 'Orbitron', fontSize: 12)),
+                                width: 220, height: 220,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _isScanning ? Colors.greenAccent : Colors.cyanAccent.withOpacity(0.5),
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    const Positioned(top: 10, left: 10, child: Icon(Icons.crop_free, color: Colors.white, size: 30)),
+                                    const Positioned(bottom: 10, right: 10, child: Icon(Icons.crop_free, color: Colors.white, size: 30)),
+                                    
+                                    if (_isScanning)
+                                      AnimatedBuilder(
+                                        animation: _scanLineAnimation,
+                                        builder: (context, child) {
+                                          return Align(
+                                            alignment: Alignment(0, _scanLineAnimation.value * 2 - 1),
+                                            child: Container(
+                                              height: 2, width: double.infinity,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.redAccent,
+                                                boxShadow: [BoxShadow(color: Colors.red, blurRadius: 5)],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                            
-                          // Overlays
-                          if (_analysisComplete && !_showResult)
-                             Positioned.fill(child: Container(color: Colors.black.withOpacity(0.9), child: _buildAnalysisReport(scenario))),
-                          if (_showResult)
-                             Positioned.fill(child: Container(color: Colors.black.withOpacity(0.95), child: _buildResultOverlay(scenario))),
-                        ],
+                      
+                            // D. Scanning Text
+                            if (_isScanning)
+                              Positioned(
+                                top: 20,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                                  child: Text("ANALYZING... ${(_scanProgress * 100).toInt()}%",
+                                    style: const TextStyle(color: Colors.greenAccent, fontFamily: 'Orbitron', fontSize: 12)),
+                                ),
+                              ),
+                              
+                            // Overlays
+                            if (_analysisComplete && !_showResult)
+                               Positioned.fill(child: Container(color: Colors.black.withOpacity(0.9), child: _buildAnalysisReport(scenario))),
+                            if (_showResult)
+                               Positioned.fill(child: Container(color: Colors.black.withOpacity(0.95), child: _buildResultOverlay(scenario))),
+                          ],
+                        ),
                       );
                     }
                   ),
@@ -382,10 +397,10 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                       const SizedBox(height: 20),
                       const Row(
                         children: [
-                          Icon(Icons.threed_rotation, color: Colors.cyanAccent, size: 20),
+                          Icon(Icons.touch_app, color: Colors.cyanAccent, size: 20),
                           SizedBox(width: 10),
                           Text(
-                            "TILT PHONE TO AIM CAMERA", 
+                            "TILT OR DRAG TO AIM CAMERA", 
                             style: TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -532,7 +547,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
               children: [
                 const Icon(Icons.threed_rotation, size: 60, color: Colors.cyanAccent),
                 const SizedBox(height: 20),
-                const Text("GYRO ACTIVATED", style: TextStyle(fontFamily: 'Orbitron', fontSize: 24, color: Colors.white)),
+                const Text("SCANNER READY", style: TextStyle(fontFamily: 'Orbitron', fontSize: 24, color: Colors.white)),
                 const SizedBox(height: 20),
                 Container(
                   width: 280,
@@ -540,7 +555,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                   decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(12)),
                   child: const Column(
                     children: [
-                      Text("1. Tilt your phone to look around", style: TextStyle(color: Colors.white)),
+                      Text("1. Tilt or drag screen to look around", style: TextStyle(color: Colors.white)),
                       SizedBox(height: 10),
                       Text("2. Frame the QR code in the box", style: TextStyle(color: Colors.white)),
                       SizedBox(height: 10),
