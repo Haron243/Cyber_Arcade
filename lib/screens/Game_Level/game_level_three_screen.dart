@@ -30,6 +30,9 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
   bool _showOtpOverlay = false;
   String _generatedOtp = "847291"; // Default, or randomize
 
+  bool _isCutscenePlaying = true; // to check for cutscene
+
+
   // Scoring
   int _score = 0;
   bool _isWin = false;
@@ -39,6 +42,30 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
   void initState() {
     super.initState();
     _pickRandomScenario();
+
+    // ADDED: Trigger cutscene on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // ADDED: Cutscene routing
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, 
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 3),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // WHEN CUTSCENE ENDS: Render the incoming call and start the ringing!
+      setState(() {
+        _isCutscenePlaying = false;
+      });
+    });
   }
 
   @override
@@ -198,7 +225,8 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
       body: Stack(
         children: [
           // 1. THE GAME SCREENS (Switched via Stack or if/else)
-          if (_gameState == GameState.incoming)
+          // ADDED: !_isCutscenePlaying condition
+          if (_gameState == GameState.incoming && !_isCutscenePlaying)
             IncomingCallOverlay(
               scenario: _scenario,
               onAccept: _acceptCall,

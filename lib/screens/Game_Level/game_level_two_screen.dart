@@ -19,6 +19,35 @@ class _GameLevelTwoScreenState extends State<GameLevelTwoScreen> {
   bool? _lastGuessCorrect;
   bool _showFeedback = false;
 
+  // --- ADDED: Trigger cutscene on load ---
+  @override
+  void initState() {
+    super.initState();
+    
+    // Wait for the game screen to build its first frame, then push the cutscene over it
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // --- ADDED: Cutscene routing logic ---
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, // Keeps the transition smooth and the route transparent
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 2),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // A cinematic fade-in / fade-out transition
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // The cutscene finished fading out. 
+      // Players can now interact with the level!
+    });
+  }
+
   void _handleGuess(bool userSaidPhishing) {
     final currentScenario = levelTwoData[_currentIndex];
     final isCorrect = currentScenario.isPhishing == userSaidPhishing;

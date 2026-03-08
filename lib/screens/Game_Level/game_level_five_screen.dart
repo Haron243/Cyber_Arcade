@@ -38,6 +38,8 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   bool _isSuccess = false;
   bool _showTutorial = true;
 
+  bool _isCutscenePlaying = true; // for cutscene play checking
+
   // --- Animation ---
   late AnimationController _scanLineController;
   late Animation<double> _scanLineAnimation;
@@ -54,7 +56,32 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     
     _scanLineAnimation = Tween<double>(begin: 0.1, end: 0.9).animate(_scanLineController);
 
-    _initGyroscope();
+    // REMOVED: _initGyroscope() is no longer here!
+    
+    // ADDED: Trigger cutscene on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // ADDED: Cutscene routing
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, 
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 5),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // WHEN CUTSCENE ENDS: Allow touch interactions and start the Gyroscope!
+      setState(() {
+        _isCutscenePlaying = false;
+      });
+      _initGyroscope(); 
+    });
   }
 
   // Generates a point within a safe, reachable radius of the center
@@ -262,7 +289,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
                       // ADDED: GestureDetector to support drag/touch controls
                       return GestureDetector(
                         onPanUpdate: (details) {
-                          if (_analysisComplete || _showTutorial) return;
+                          if (_analysisComplete || _showTutorial || _isCutscenePlaying) return;
                           // Pass touch drag delta directly to our shared movement logic
                           _updateCameraOffset(details.delta.dx, details.delta.dy);
                         },

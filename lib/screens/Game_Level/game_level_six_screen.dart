@@ -34,6 +34,8 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
   bool _showTutorial = true;
   int _tutorialStep = 0;
 
+  bool _isCutscenePlaying = true; // to check if cutscene playing or not
+
   bool _isSimulating = false;
   bool _isGameOver = false;
   String? _resultTitle;
@@ -60,6 +62,30 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
         AnimationController(vsync: this, duration: const Duration(milliseconds: 2800));
     _edgePulseController =
         AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+
+    // ADDED: Trigger cutscene on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // ADDED: Cutscene routing
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, 
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 6),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // WHEN CUTSCENE ENDS: Allow the tutorial overlay to appear!
+      setState(() {
+        _isCutscenePlaying = false;
+      });
+    });
   }
 
   @override
@@ -322,7 +348,8 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
               ],
             ),
           ),
-          if (_showTutorial) _buildTutorialOverlay(),
+          // ADDED: !_isCutscenePlaying check so tutorial waits for cutscene
+          if (_showTutorial && !_isCutscenePlaying) _buildTutorialOverlay(),
           if (_inspectingNode != null) _buildInspectModal(),
           if (_isGameOver) _buildResultModal(),
           Positioned(

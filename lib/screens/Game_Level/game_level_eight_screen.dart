@@ -45,6 +45,8 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
   final ScrollController _scrollController = ScrollController();
   late AnimationController _echoMeterController;
 
+  bool _isCutscenePlaying = true; // checking cutscene present or not
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,30 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
       duration: const Duration(milliseconds: 300),
     )..repeat(reverse: true);
     _loadScenario(0);
+
+    // ADDED: Trigger cutscene on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // ADDED: Cutscene routing
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, 
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 8),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // WHEN CUTSCENE ENDS: Allow the tutorial overlay to appear!
+      setState(() {
+        _isCutscenePlaying = false;
+      });
+    });
   }
 
   @override
@@ -367,7 +393,7 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
             ],
           ),
 
-          if (_showTutorial) _buildTutorialOverlay(),
+          if (_showTutorial && !_isCutscenePlaying) _buildTutorialOverlay(),
           if (!_isGameOver) 
             Positioned(
               bottom: 0, 

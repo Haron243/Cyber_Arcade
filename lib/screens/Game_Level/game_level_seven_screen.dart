@@ -31,6 +31,7 @@ class _GameLevelSevenScreenState extends State<GameLevelSevenScreen> {
   // --- Game state ---
   late int _tokensRemaining;
   final Set<String> _blockedAppIds = {};
+  bool _isCutscenePlaying = true; // to check if cutscene playing or not
   
   // Per-app tracking: which checks have been run, what clues revealed
   final Map<String, Set<String>> _completedChecks = {}; // appId -> {checkId, ...}
@@ -46,6 +47,30 @@ class _GameLevelSevenScreenState extends State<GameLevelSevenScreen> {
   void initState() {
     super.initState();
     _loadScenario(0);
+
+    // ADDED: Trigger cutscene on load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // ADDED: Cutscene routing
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, 
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 7),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // WHEN CUTSCENE ENDS: Allow the tutorial overlay to appear!
+      setState(() {
+        _isCutscenePlaying = false;
+      });
+    });
   }
 
   void _loadScenario(int index) {
@@ -256,7 +281,7 @@ class _GameLevelSevenScreenState extends State<GameLevelSevenScreen> {
             ),
 
           // Tutorial overlay
-          if (_showTutorial) _buildTutorialOverlay(),
+          if (_showTutorial && !_isCutscenePlaying) _buildTutorialOverlay(),
 
           // Back button
           Positioned(
