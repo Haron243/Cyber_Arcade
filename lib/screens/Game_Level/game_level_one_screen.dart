@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:demo_app/data/level_one_data.dart'; 
 import 'package:demo_app/services/user_progress_service.dart'; 
+import 'package:demo_app/screens/Game_Level/cutscene_screen.dart';
 
 class GameLevelOneScreen extends StatefulWidget {
   const GameLevelOneScreen({super.key});
@@ -14,6 +15,35 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
   int _currentIndex = 0;
   int _score = 0;
   bool? _lastGuessCorrect; // null = neutral, true = correct, false = wrong
+
+  // --- ADDED: Trigger cutscene on load ---
+  @override
+  void initState() {
+    super.initState();
+    
+    // Wait for the game screen to build its first frame, then push the cutscene over it
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showCutscene();
+    });
+  }
+
+  // --- ADDED: Cutscene routing logic ---
+  void _showCutscene() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false, // Keeps the transition smooth and the route transparent
+        pageBuilder: (context, animation, secondaryAnimation) => const CutsceneScreen(levelId: 1),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // A cinematic fade-in / fade-out transition
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    ).then((_) {
+      // The cutscene finished fading out. 
+      // (If we had a game timer, we would start it here. For Level 1, we just let them play!)
+    });
+  }
 
   void _handleGuess(bool userSaysLegit) {
     final isActuallyLegit = !levelOneData[_currentIndex].isPhishing;

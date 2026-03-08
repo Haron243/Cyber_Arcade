@@ -9,6 +9,7 @@ import 'package:demo_app/widgets/Game_level/Level_7/app_card_widget.dart';
 import 'package:demo_app/widgets/Game_level/Level_7/inspector_panel_widget.dart';
 import 'package:demo_app/widgets/Game_level/Level_7/result_screen_widget.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_background.dart';
+import 'package:demo_app/screens/Game_Level/cutscene_screen.dart';
 
 class GameLevelSevenScreen extends StatefulWidget {
   const GameLevelSevenScreen({super.key});

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Custom ignores for API keys
 const.dart
+
+# Firebase options
+lib/firebase_options.dart
