@@ -33,6 +33,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _loginWithGoogle() async {
+    final success = await _authService.signInWithGoogle();
+    if (success) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      setState(() {
+        _errorMessage = 'Google Sign-In failed or was canceled.';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,7 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (_errorMessage.isNotEmpty)
                     Text(_errorMessage, style: const TextStyle(color: Colors.red, fontSize: 14)),
                   const SizedBox(height: 30),
+                  
                   CyberButton(text: 'ENTER', onPressed: _login),
+                  const SizedBox(height: 15),
+                  
+                  // NEW GOOGLE SIGN IN BUTTON
+                  CyberButton(text: 'SIGN IN WITH GOOGLE', onPressed: _loginWithGoogle),
+                  
                   const SizedBox(height: 20),
                   TextButton(
                     onPressed: () => Navigator.pushNamed(context, '/register'),

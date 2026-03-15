@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "407700982276",
+    "project_id": "cyber-arcade-76787",
+    "storage_bucket": "cyber-arcade-76787.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:407700982276:android:965e6dd28623eb2568c351",
+        "android_client_info": {
+          "package_name": "com.example.cyber_arcade"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "407700982276-jbns6qlfo3kqmgu2s59q8rp3bcbdgsdq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cyber_arcade",
+            "certificate_hash": "29940a223cfcdec717d059fc72426d5010f67b70"
+          }
+        },
+        {
+          "client_id": "407700982276-mbk5hqusuubhlk15s552jjo3s9vqs3na.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKRveevkELlhzsgiHcq7SEtsYWfN3y_yg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "407700982276-mbk5hqusuubhlk15s552jjo3s9vqs3na.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
