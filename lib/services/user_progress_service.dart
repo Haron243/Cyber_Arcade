@@ -7,7 +7,7 @@ class UserProgressService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   
   static final Map<int, int> _unlockRequirements = {
-    2: 500, 3: 600, 4: 100, 5: 200, 6: 300, 7: 300, 8: 90,
+    2: 500, 3: 600, 4: 100, 5: 200, 6: 400, 7: 300, 8: 90,
   };
 
   static const int levelOneThreshold = 500; 

@@ -43,7 +43,7 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
   // --- UI state ---
   bool _showReplyOptions = false;
   final ScrollController _scrollController = ScrollController();
-  late AnimationController _echoMeterController;
+  // late AnimationController _echoMeterController;
 
   bool _isCutscenePlaying = true; // checking cutscene present or not
 

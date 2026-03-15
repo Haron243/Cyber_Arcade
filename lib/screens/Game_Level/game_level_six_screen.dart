@@ -232,7 +232,7 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
   }
 
   // --- simulation ------------------------------------------------------------
-  void _startSimulation(Size size) {
+  void _startSimulation() { // <-- Removed Size parameter
     final pathIds = _bfsPath();
     if (pathIds == null) {
       setState(() {
@@ -247,7 +247,6 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
 
     final leakAt = _findLeakIndex(pathIds);
 
-    // Grab the failure message while we already know where the leak is
     String? failureReason;
     if (leakAt != null) {
       final fwd = '${pathIds[leakAt - 1]}->${pathIds[leakAt]}';
@@ -258,19 +257,14 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
     setState(() {
       _isSimulating = true;
       _activePath = pathIds;
-      _waypoints = pathIds.map((id) {
-        final n = _scenario.nodes.firstWhere((nd) => nd.id == id);
-        return Offset(n.x * size.width, n.y * size.height);
-      }).toList();
       _leakIndex = leakAt;
-      _leakTarget = Offset(size.width * 0.92, size.height * 0.92);
       _lastConnectedEdgeIndex = null;
+      // Removed the hardcoded _waypoints and _leakTarget from here!
     });
 
     _moneyController.forward(from: 0).whenComplete(() {
-      final scenarioXP = _calculateScenarioXP();
-      
       setState(() {
+        // 1. FIRST update the success state
         _isSuccess = failureReason == null;
         _resultTitle = _isSuccess ? "PAYMENT SECURE" : "PAYMENT FAILED";
         _resultMessage = _isSuccess
@@ -278,10 +272,10 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
             : "Your money did not arrive safely. Watch the replay to see where it went.\n\n${failureReason ?? ''}";
         _isGameOver = true;
         
-        // Add this scenario's XP to total
+        // 2. THEN calculate and add the XP because the game now knows you won!
         if (_isSuccess) {
+          final scenarioXP = _calculateScenarioXP(); 
           _totalXP += scenarioXP;
-          // Save progress after each successful scenario (high score system)
           _progressService.saveLevelProgress(6, _totalXP);
         }
       });
@@ -443,7 +437,7 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Inspect
+          // Inspect Button
           Expanded(
             flex: 1,
             child: GestureDetector(
@@ -478,36 +472,27 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
             ),
           ),
           const SizedBox(width: 12),
-          // Send
+          // Send Payment Button (Fixed Layout)
           Expanded(
             flex: 2,
-            child: LayoutBuilder(
-              builder: (ctx, constraints) {
-                return ElevatedButton(
-                  onPressed: _canSend
-                      ? () {
-                          final canvasSize = Size(constraints.maxWidth, 640);
-                          _startSimulation(canvasSize);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    disabledBackgroundColor: const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 4,
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("SEND PAYMENT",
-                          style: TextStyle(fontFamily: 'Orbitron', color: Colors.white, fontWeight: FontWeight.bold)),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, color: Colors.white, size: 18),
-                    ],
-                  ),
-                );
-              },
+            child: ElevatedButton(
+              onPressed: _canSend ? _startSimulation : null, // <-- Fix is here!
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[600],
+                disabledBackgroundColor: const Color(0xFF334155),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 4,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("SEND PAYMENT",
+                      style: TextStyle(fontFamily: 'Orbitron', color: Colors.white, fontWeight: FontWeight.bold)),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                ],
+              ),
             ),
           ),
         ],
@@ -624,26 +609,34 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
   }
 
   Widget _buildMoneyToken(BoxConstraints constraints) {
-    if (_waypoints.length < 2) return const SizedBox.shrink();
+    if (_activePath.length < 2) return const SizedBox.shrink();
+
+    // Dynamically calculate the waypoints based on the EXACT screen constraints
+    final points = _activePath.map((id) {
+      final n = _scenario.nodes.firstWhere((nd) => nd.id == id);
+      return Offset(n.x * constraints.maxWidth, n.y * constraints.maxHeight);
+    }).toList();
+
+    final leakTarget = Offset(constraints.maxWidth * 0.92, constraints.maxHeight * 0.92);
 
     return AnimatedBuilder(
       animation: _moneyController,
       builder: (context, child) {
         final t = _moneyController.value;
-        final pos = _interpolatePolyline(_waypoints, t);
+        final pos = _interpolatePolyline(points, t);
 
         final leakStartT = _leakIndex != null
-            ? (_leakIndex! - 1).clamp(0, _waypoints.length - 2) / (_waypoints.length - 1)
+            ? (_leakIndex! - 1).clamp(0, points.length - 2) / (points.length - 1)
             : 2.0;
 
         final leaked = t > leakStartT;
 
         return Stack(children: [
-          if (_leakIndex != null && _leakTarget != null && leaked)
+          if (_leakIndex != null && leaked)
             () {
               final progress = ((t - leakStartT) / (1.0 - leakStartT)).clamp(0.0, 1.0);
               return _coin(
-                  Offset.lerp(_waypoints[_leakIndex!], _leakTarget!, progress)!,
+                  Offset.lerp(points[_leakIndex!], leakTarget, progress)!,
                   24,
                   Colors.red.withOpacity(0.7),
                   1.0 - progress * 0.6);
