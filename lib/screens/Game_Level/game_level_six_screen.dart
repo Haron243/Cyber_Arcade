@@ -81,6 +81,7 @@ class _GameLevelSixScreenState extends State<GameLevelSixScreen>
         },
       ),
     ).then((_) {
+      if (!mounted) return;
       // WHEN CUTSCENE ENDS: Allow the tutorial overlay to appear!
       setState(() {
         _isCutscenePlaying = false;

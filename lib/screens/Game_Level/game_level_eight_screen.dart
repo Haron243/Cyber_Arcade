@@ -50,10 +50,10 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
   @override
   void initState() {
     super.initState();
-    _echoMeterController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    )..repeat(reverse: true);
+    // _echoMeterController = AnimationController(
+    //   vsync: this,
+    //   duration: const Duration(milliseconds: 300),
+    // )..repeat(reverse: true);
     _loadScenario(0);
 
     // ADDED: Trigger cutscene on load
@@ -74,6 +74,7 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
         },
       ),
     ).then((_) {
+      if (!mounted) return;
       // WHEN CUTSCENE ENDS: Allow the tutorial overlay to appear!
       setState(() {
         _isCutscenePlaying = false;
@@ -86,7 +87,7 @@ class _GameLevelEightScreenState extends State<GameLevelEightScreen>
     _gameTimer?.cancel();
     _aiTimer?.cancel();
     _scrollController.dispose();
-    _echoMeterController.dispose();
+    // _echoMeterController.dispose();
     super.dispose();
   }
 

@@ -44,51 +44,40 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
   Future<void> _loadProgress() async {
     final service = UserProgressService();
     
-    // Check locks
-    bool lvl2Open = await service.isLevelUnlocked(2);
-    bool lvl3Open = await service.isLevelUnlocked(3);
-    bool lvl4Open = await service.isLevelUnlocked(4);
-    bool lvl5Open = await service.isLevelUnlocked(5);
-    bool lvl6Open = await service.isLevelUnlocked(6);
-    bool lvl7Open = await service.isLevelUnlocked(7);
-    bool lvl8Open = await service.isLevelUnlocked(8);
-    
-    
-    // Get Scores
-    int xp1 = await service.getLevelXP(1);
-    int xp2 = await service.getLevelXP(2);
+    // FIRE ALL ASYNC CALLS IN PARALLEL!
+    // This executes all 9 database/storage reads at the exact same time.
+    final results = await Future.wait([
+      service.isLevelUnlocked(2), // index 0
+      service.isLevelUnlocked(3), // index 1
+      service.isLevelUnlocked(4), // index 2
+      service.isLevelUnlocked(5), // index 3
+      service.isLevelUnlocked(6), // index 4
+      service.isLevelUnlocked(7), // index 5
+      service.isLevelUnlocked(8), // index 6
+      
+      // To get completed level exp
+      service.getLevelXP(1),      // index 7
+      service.getLevelXP(2),      // index 8
+    ]);
 
-    // to get future scores from sharedPreference
-    // int xp3 = await service.getLevelXP(3);
-    // int xp4 = await service.getLevelXP(4);
-    // int xp5 = await service.getLevelXP(5);
-    // int xp6 = await service.getLevelXP(6);
-    // int xp7 = await service.getLevelXP(7);
-    // int xp8 = await service.getLevelXP(8);
+    // Safety guard: Don't update UI if the user closed the screen while loading
+    if (!mounted) return;
 
-    if (mounted) {
-      setState(() {
-        _isLevel2Locked = !lvl2Open;
-        _isLevel3Locked = !lvl3Open;
-        _isLevel4Locked = !lvl4Open;
-        _isLevel5Locked = !lvl5Open;
-        _isLevel6Locked = !lvl6Open;
-        _isLevel7Locked = !lvl7Open;
-        _isLevel8Locked = !lvl8Open;
-        
-        _level1XP = xp1;
-        _level2XP = xp2;
+    setState(() {
+      // Extract the results based on their index in the array above
+      _isLevel2Locked = !(results[0] as bool);
+      _isLevel3Locked = !(results[1] as bool);
+      _isLevel4Locked = !(results[2] as bool);
+      _isLevel5Locked = !(results[3] as bool);
+      _isLevel6Locked = !(results[4] as bool);
+      _isLevel7Locked = !(results[5] as bool);
+      _isLevel8Locked = !(results[6] as bool);
+      
+      _level1XP = results[7] as int;
+      _level2XP = results[8] as int;
 
-        // for future levels
-        // _level3XP = xp3;
-        // _level4XP = xp4;
-        // _level5XP = xp5;
-        // _level6XP = xp6;
-        // _level7XP = xp7;
-        // _level8XP = xp8;
-        _isLoading = false;
-      });
-    }
+      _isLoading = false;
+    });
   }
 
   @override
@@ -97,7 +86,9 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       body: Stack(
         children: [
           // 1. Background (Fixed)
-          const CyberBackground(),
+          const RepaintBoundary(
+            child: CyberBackground(),
+          ),
 
           // 2. Content (Scrollable)
           SafeArea(
@@ -287,72 +278,67 @@ class _LevelSelectionScreenState extends State<LevelSelectionScreen> {
       },
       child: Stack(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(15),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  border: Border.all(
-                    color: isLocked ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.6),
-                    width: 1.5,
+          // REMOVED ClipRRect and BackdropFilter here
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.8), // Increased opacity to 0.8 to compensate for no blur
+              border: Border.all(
+                color: isLocked ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.6),
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isLocked ? Colors.grey.withOpacity(0.1) : color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isLocked ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.3),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(15),
+                  child: Icon(icon, color: isLocked ? Colors.grey : color, size: 30),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isLocked ? Colors.grey.withOpacity(0.1) : color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isLocked ? Colors.grey.withOpacity(0.3) : color.withOpacity(0.3),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Orbitron',
+                          color: isLocked ? Colors.grey : color,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
                         ),
                       ),
-                      child: Icon(icon, color: isLocked ? Colors.grey : color, size: 30),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: TextStyle(
-                              fontFamily: 'Orbitron',
-                              color: isLocked ? Colors.grey : color,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            subtitle,
-                            style: const TextStyle(
-                              fontFamily: 'Orbitron',
-                              color: Colors.white70,
-                              fontSize: 10,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            description,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 5),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontFamily: 'Orbitron',
+                          color: Colors.white70,
+                          fontSize: 10,
+                          letterSpacing: 1,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
           if (isLocked)

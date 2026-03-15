@@ -44,6 +44,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
   // --- Animation ---
   late AnimationController _scanLineController;
   late Animation<double> _scanLineAnimation;
+  Timer? _scanTimer; // <--- ADD THIS
 
   @override
   void initState() {
@@ -77,6 +78,7 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
         },
       ),
     ).then((_) {
+      if (!mounted) return;
       // WHEN CUTSCENE ENDS: Allow touch interactions and start the Gyroscope!
       setState(() {
         _isCutscenePlaying = false;
@@ -141,6 +143,8 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
 
   @override
   void dispose() {
+    AudioService().resumeBGM();
+    _scanTimer?.cancel();
     _scanLineController.dispose();
     _gyroSubscription?.cancel();
     super.dispose();
@@ -188,8 +192,9 @@ class _GameLevelFiveScreenState extends State<GameLevelFiveScreen> with TickerPr
     if (_isScanning || _analysisComplete) return;
     _isScanning = true;
 
-    Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (!_isScanning) {
+    _scanTimer?.cancel(); // Ensure no duplicates
+    _scanTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
+      if (!_isScanning || !mounted) {
         timer.cancel();
         return;
       }

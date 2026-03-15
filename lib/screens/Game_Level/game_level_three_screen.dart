@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart'; // Add this package!
 import 'package:demo_app/data/level_three_data.dart';
@@ -27,6 +28,7 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
   
   // Logic State
   final AudioPlayer _audioPlayer = AudioPlayer();
+  StreamSubscription? _audioSubscription;
   String _userInputBuffer = ""; // Stores what user types on dialpad
   bool _showOtpOverlay = false;
   String _generatedOtp = "847291"; // Default, or randomize
@@ -62,6 +64,7 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
         },
       ),
     ).then((_) {
+      if (!mounted) return;
       // WHEN CUTSCENE ENDS: Render the incoming call and start the ringing!
       setState(() {
         _isCutscenePlaying = false;
@@ -73,6 +76,8 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
 
   @override
   void dispose() {
+    AudioService().resumeBGM();
+    _audioSubscription?.cancel();
     _audioPlayer.stop();
     _audioPlayer.dispose();
     super.dispose();
@@ -119,7 +124,9 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
         // Wait for audio to finish then end call? 
         // For simplicity, we can let user hang up or use a delay.
         // Better: Listen to onPlayerComplete.
-        _audioPlayer.onPlayerComplete.listen((event) {
+        _audioSubscription?.cancel(); // <--- ADD THIS: Destroy the old listener first
+        
+        _audioSubscription = _audioPlayer.onPlayerComplete.listen((event) {
             if (_gameState == GameState.connected) {
                _finishGame(isWin: step.isWin, message: step.endMessage ?? "Call Ended");
             }
