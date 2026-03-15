@@ -5,6 +5,7 @@ import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
 import 'package:demo_app/data/level_four_data.dart';
 import 'package:demo_app/services/user_progress_service.dart';
 import 'package:demo_app/screens/Game_Level/cutscene_screen.dart';
+import 'package:demo_app/services/audio_service.dart';
 
 class GameLevelFourScreen extends StatefulWidget {
   const GameLevelFourScreen({super.key});
@@ -446,6 +447,8 @@ class _GameLevelFourScreenState extends State<GameLevelFourScreen> {
                 onPressed: () async {
                   final service = UserProgressService();
                   await service.saveLevelProgress(4, _score);
+                  AudioService().resumeBGM();
+                  
                   if (context.mounted) {
                     Navigator.pop(context);
                     Navigator.pop(context);

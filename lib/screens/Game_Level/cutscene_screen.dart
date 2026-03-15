@@ -5,6 +5,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:demo_app/data/cutscene_data.dart';
+// audio import
+import 'package:audioplayers/audioplayers.dart';
 
 class CutsceneScreen extends StatefulWidget {
   final int levelId;
@@ -23,6 +25,9 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
   String _displayedText = "";
   Timer? _typewriterTimer;
   bool _isTyping = false;
+
+  // ADDED: The SFX player for the typing sound
+  final AudioPlayer _sfxPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -43,6 +48,7 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
   @override
   void dispose() {
     _typewriterTimer?.cancel();
+    _sfxPlayer.dispose(); // ADDED: Free up memory when the cutscene closes
     super.dispose();
   }
 
@@ -51,6 +57,10 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
     _displayedText = "";
     _isTyping = true;
     int charIndex = 0;
+
+    // ADDED: Start looping the typing sound
+    _sfxPlayer.setReleaseMode(ReleaseMode.loop);
+    _sfxPlayer.play(AssetSource('audio/sfx/typing.mp3'), volume: 0.8);
 
     // Speed of the typewriter effect (milliseconds per character)
     const typingSpeed = Duration(milliseconds: 30);
@@ -66,6 +76,7 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
           _isTyping = false;
         });
         timer.cancel();
+        _sfxPlayer.stop(); // ADDED: Stop the sound when typing finishes naturally
       }
     });
   }
@@ -74,6 +85,8 @@ class _CutsceneScreenState extends State<CutsceneScreen> {
     if (_isTyping) {
       // If still typing, tapping skips the animation and shows full text instantly
       _typewriterTimer?.cancel();
+      _sfxPlayer.stop(); // ADDED: Stop the sound immediately if user skips!
+
       setState(() {
         _displayedText = _script[_currentIndex].text;
         _isTyping = false;

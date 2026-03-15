@@ -23,6 +23,9 @@ import 'package:demo_app/const.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
+// --- AUDIO SERVICE IMPORT ---
+import 'package:demo_app/services/audio_service.dart';
+
 void main() async {
   // 1. Ensure Flutter bindings are initialized before calling Firebase
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +37,9 @@ void main() async {
 
   // Initialize the Gemini API
   Gemini.init(apiKey: GEMINI_API_KEY);
+
+  // Start the background music globally as soon as the app initializes!
+  AudioService().startBGM();
   
   runApp(const MyApp());
 }

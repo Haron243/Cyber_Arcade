@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:demo_app/data/level_one_data.dart'; 
 import 'package:demo_app/services/user_progress_service.dart'; 
 import 'package:demo_app/screens/Game_Level/cutscene_screen.dart';
+import 'package:demo_app/services/audio_service.dart';
 
 class GameLevelOneScreen extends StatefulWidget {
   const GameLevelOneScreen({super.key});
@@ -104,6 +105,7 @@ class _GameLevelOneScreenState extends State<GameLevelOneScreen> {
             actions: [
               TextButton(
                 onPressed: () {
+                  AudioService().resumeBGM();
                   Navigator.pop(context); // Close dialog
                   Navigator.pop(context); // Exit level
                 },

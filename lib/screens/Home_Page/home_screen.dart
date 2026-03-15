@@ -5,6 +5,8 @@ import 'package:demo_app/widgets/Home_Page/cyber_button.dart';
 import 'package:demo_app/widgets/Home_Page/custom_glitch_text.dart';
 import 'package:demo_app/widgets/Home_Page/cyber_frame.dart';
 import 'package:demo_app/services/auth_service.dart';
+// adding setings
+import 'package:demo_app/screens/Settings/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -123,13 +125,22 @@ class _CustomDrawer extends StatelessWidget {
                 onTap: () => Navigator.pop(context),
               ),
               const SizedBox(height: 30),
+
               _drawerItem(context, 'CONSULTANT', () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/mailAnalyzer');
               }),
-              _drawerItem(context, 'NEW GAME', () {}),
-              _drawerItem(context, 'SETTINGS', () {}),
-              _drawerItem(context, 'PROGRESS', () {}),
+
+              _drawerItem(context, 'SETTINGS', () {
+                Navigator.pop(context); // Close the drawer first
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              }),
+
+              // _drawerItem(context, 'NEW GAME', () {}),
+              // _drawerItem(context, 'PROGRESS', () {}),
               _drawerItem(context, 'LOGOUT', () {
                   AuthService().logoutUser();
                   Navigator.pushReplacementNamed(context, '/login');
