@@ -66,6 +66,8 @@ class _GameLevelThreeScreenState extends State<GameLevelThreeScreen> {
       setState(() {
         _isCutscenePlaying = false;
       });
+      // Cut the music so they can hear the phone ring!
+      AudioService().pauseBGM();
     });
   }
 
